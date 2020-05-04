@@ -12,6 +12,23 @@ function get_random_Hamiltonian(Nx::Int, Ny::Int)
 end
 
 
+function calculate_energy(H, N, ir, il, iu, id)
+    total_energy = 0
+
+    for i in CartesianIndices(H)[1:N]
+        s_i_y, s_i_x = Tuple(i)
+        neighbors = [H[idy, idx] for (idy, idx) in [
+            (s_i_y, ir[s_i_x]),  # Right
+            (s_i_y, il[s_i_x]),  # Left
+            (iu[s_i_y], s_i_x),  # Up
+            (id[s_i_y], s_i_x),  # Down
+        ]]
+        total_energy += -1/2 * flipsign(sum(neighbors), H[i])
+    end
+    return total_energy
+end
+
+
 function step!(
     H::AbstractArray,
     N::Int,
@@ -66,14 +83,22 @@ function step!(
         div(neighbor_sum, 2),  # div is integer division
         spin
     )
+    accept = false
     if delta_H_fourth > 0
         r = rand()  # Random number r in [0,1)
         acceptance_criterion = exponent_lookup[delta_H_fourth]
         if acceptance_criterion > r
-            H[s_i] = -spin
+            accept = true
         end
     else
+        accept = true
+    end
+
+    if accept == true
         H[s_i] = -spin
+        return delta_H_fourth
+    else
+        return 0
     end
 end
 
