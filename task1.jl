@@ -1,4 +1,5 @@
 include("utils.jl")
+using Statistics  # Mean
 
 """Original Mon Jasnow. ie.
 Periodic in y, positive/negative boundaries in x
@@ -18,9 +19,9 @@ Ny+            +/-   |
 #########
 # Setup #
 #########
-Nx, Ny = 20, 20
+Nx, Ny = 25, 25
 N = Nx*Ny
-T = 1
+T = 0.2
 
 H_pp = get_random_Hamiltonian(Nx+2, Ny)
 H_pn = get_random_Hamiltonian(Nx+2, Ny)
@@ -48,7 +49,7 @@ H_0_pn = calculate_energy(H_pn, N, ir, il, iu, id)
 #######
 # Run #
 #######
-t_space = 1:60000
+t_space = 1:200000
 delta_H_pp = zero(t_space)
 delta_H_pn = zero(t_space)
 
@@ -57,3 +58,10 @@ for i in t_space
     delta_H_pn[i] = step!(H_pn, N, T, exponent_lookup, ir, il, iu, id)
 end
 
+H_pp = H_0_pp .+ (cumsum(delta_H_pp)*4)
+H_pn = H_0_pn .+ (cumsum(delta_H_pn)*4)
+
+party_ratio = exp.((H_pp - H_pn)/T)
+party_ratio_exp_val = mean(party_ratio[150000:end])
+tau = - T/Ny * log.(party_ratio_exp_val)
+println(tau)
