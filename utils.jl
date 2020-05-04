@@ -33,14 +33,23 @@ function step!(
     to reduce operations. Ie. calculate acceptance_criterion
     before r, then throw away at once if DH < 0.
     """
+
+    # This section is not as trivial as it seems
+    # H may be bigger than Nx x Ny, to accomodate, for example.
+    # fixed columns at the edges and such.
+    # Julia has column oriented arrays, so
+    # in linear coordinates, they go column first, then row.
+    # Thus, so long as these "extra" columns, that make H bigger,
+    # are only at the edge, Nx+1, Nx+2 ..., this will work.
+    # Ny, must however be the correct size in H.
     s_i = rand(1:N)  # Spin to flip
     s_i_cartesian = CartesianIndices(H)[s_i]
-    s_i_x, s_i_y = Tuple(s_i_cartesian)
-    neighbors = [H[idx, idy] for (idx, idy) in [
-        (ir[s_i_x], s_i_y),  # Right
-        (il[s_i_x], s_i_y),  # Left
-        (s_i_x, iu[s_i_y]),  # Up
-        (s_i_x, id[s_i_y]),  # Down
+    s_i_y, s_i_x = Tuple(s_i_cartesian)
+    neighbors = [H[idy, idx] for (idy, idx) in [
+        (s_i_y, ir[s_i_x]),  # Right
+        (s_i_y, il[s_i_x]),  # Left
+        (iu[s_i_y], s_i_x),  # Up
+        (id[s_i_y], s_i_x),  # Down
     ]]
 
     spin = H[s_i]
