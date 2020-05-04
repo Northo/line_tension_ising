@@ -31,8 +31,6 @@ function step!(
      . Consider if one should change order of operations,
     to reduce operations. Ie. calculate acceptance_criterion
     before r, then throw away at once if DH < 0.
-     . Find out how efficient CartesianIndex is
-     . Implement periodic boundary conditions
     """
     s_i = rand(1:N)  # Spin to flip
     s_i_cartesian = CartesianIndices(H)[s_i]
@@ -40,20 +38,12 @@ function step!(
     neighbors = [H[idx, idy] for (idx, idy) in [
         (ir[s_i_x], s_i_y),  # Right
         (il[s_i_x], s_i_y),  # Left
-        (s_i_x, iu(s_i_y)),  # Up
-        (s_i_x, id(s_i_y)),  # Down
+        (s_i_x, iu[s_i_y]),  # Up
+        (s_i_x, id[s_i_y]),  # Down
     ]]
-
-    neighbors_indices = [s_i_cartesian + i for i in [
-        CartesianIndex(1, 0),
-        CartesianIndex(-1, 0),
-        CartesianIndex(0, 1),
-        CartesianIndex(0, -1),
-    ]]  # Neighbors right, left, above, below
     r = rand()  # Random number r in [0,1)
 
     spin = H[s_i]
-    neighbors = H[neighbors_indices]
     # TODO: Looup exponential
     delta_H = 2*spin*sum(neighbors)
     acceptance_criterion = exp(-delta_H/T)
@@ -62,12 +52,46 @@ function step!(
     end
 end
 
+
+function get_index_vectors(Nx, Ny)
+    """Create index lookup tables.
+    Note that the ends simple go out of bound,
+    conditions such as periodic boundaries
+    must be added"""
+
+    ir = Vector{Integer}(undef, Nx)
+    il = Vector{Integer}(undef, Nx)
+    iu = Vector{Integer}(undef, Ny)
+    id = Vector{Integer}(undef, Ny)
+    for index in CartesianIndices((1:Ny, 1:Nx))
+        x,y = Tuple(index)
+        ir[x] = x+1
+        il[x] = x-1
+        iu[y] = y+1
+        id[y] = y-1
+    end
+
+    return ir, il, iu, id
+end
+
+
+function get_torus_index_vectors(Nx, Ny)
+    ir, il, iu, id = get_index_vectors(Nx, Ny)
+    # Connect the edges
+    ir[Nx] = 1
+    il[1] = Nx
+    iu[Ny] = 1
+    id[1] = Ny
+    return ir, il, iu, id
+end
+
 Nx = 5
 Ny = 5
 N = Nx * Ny
 T = 1
 
 H = get_random_Hamiltonian(Nx, Ny)
-println(H)
-step!(H, N, T)
-println(H)
+ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
+for i in 1:100
+    step!(H, N, T, ir, il, iu, id)
+end
