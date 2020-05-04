@@ -7,7 +7,7 @@
 """
 
 function get_random_Hamiltonian(Nx::Int, Ny::Int)
-    H = rand(Int, (Ny, Nx))
+    H = rand([1, -1], (Ny, Nx))
     return H
 end
 
@@ -16,6 +16,7 @@ function step!(
     H::AbstractArray,
     N::Int,
     T,
+    exponent_lookup::AbstractVector,
     ir::AbstractVector,
     il::AbstractVector,
     iu::AbstractVector,
@@ -41,13 +42,28 @@ function step!(
         (s_i_x, iu[s_i_y]),  # Up
         (s_i_x, id[s_i_y]),  # Down
     ]]
-    r = rand()  # Random number r in [0,1)
 
     spin = H[s_i]
-    # TODO: Looup exponential
-    delta_H = 2*spin*sum(neighbors)
-    acceptance_criterion = exp(-delta_H/T)
-    if acceptance_criterion > r
+    neighbor_sum = sum(neighbors)
+
+    # Delta_H can only take certain values
+    # They are -8 -4 0 4 8.
+    # -8, 4, and 0 give certain flip. 4 and 8 might give flip
+    # To avoid calculating exp(-deltaH/T) each time,
+    # we look up in exponent_lookup.
+    # There, the index is the fourth of delta_H, so
+    # delta_H = 8 corresponds to exponent_lookup[2]
+    delta_H_fourth = flipsign(
+        div(neighbor_sum, 2),  # div is integer division
+        spin
+    )
+    if delta_H_fourth > 0
+        r = rand()  # Random number r in [0,1)
+        acceptance_criterion = exponent_lookup[delta_H_fourth]
+        if acceptance_criterion > r
+            H[s_i] = -spin
+        end
+    else
         H[s_i] = -spin
     end
 end
@@ -85,13 +101,27 @@ function get_torus_index_vectors(Nx, Ny)
     return ir, il, iu, id
 end
 
+
+function get_exponent_lookup(T)
+    """Since e^(-beta Delta_H) can only have
+    certain values, calculate the values first.
+
+    Possible values for delta H are 4 and 8.
+    We look up delta_H/4, so that is 1 and 2"""
+    table = zeros(2)
+    table[1] = exp(-4/T)
+    table[2] = exp(-8/T)
+    return table
+end
+
 Nx = 5
 Ny = 5
 N = Nx * Ny
 T = 1
 
 H = get_random_Hamiltonian(Nx, Ny)
+exponent_lookup = get_exponent_lookup(T)
 ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
 for i in 1:100
-    step!(H, N, T, ir, il, iu, id)
+    step!(H, N, T, exponent_lookup, ir, il, iu, id)
 end
