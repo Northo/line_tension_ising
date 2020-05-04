@@ -18,25 +18,42 @@ Ny+            +/-   |
 #########
 # Setup #
 #########
-Nx, Ny = 5,5
+Nx, Ny = 20, 20
 N = Nx*Ny
 T = 1
-H = get_random_Hamiltonian(Nx+2, Ny)
+
+H_pp = get_random_Hamiltonian(Nx+2, Ny)
+H_pn = get_random_Hamiltonian(Nx+2, Ny)
+
 exponent_lookup = get_exponent_lookup(T)
 
 # Set second last column to 1 and last column to -1
-H[:, end-1] .= 1
-H[:, end] .= -1
+H_pp[:, end-1] .= +1
+H_pp[:, end] .= +1
+
+H_pn[:, end-1] .= +1
+H_pn[:, end] .= -1
 
 # Fix boundary conditions
 ir, il, iu, id = get_index_vectors(Nx, Ny)
 il[1] = Nx+1  # positive column
+ir[Nx] = Nx+2  # positive/negative column
 iu[Ny] = 1
 id[1] = Ny
+
+# Initial energies
+H_0_pp = calculate_energy(H_pp, N, ir, il, iu, id)
+H_0_pn = calculate_energy(H_pn, N, ir, il, iu, id)
 
 #######
 # Run #
 #######
-for i in 1:100
-    step!(H, N, T, exponent_lookup, ir, il, iu, id)
+t_space = 1:60000
+delta_H_pp = zero(t_space)
+delta_H_pn = zero(t_space)
+
+for i in t_space
+    delta_H_pp[i] = step!(H_pp, N, T, exponent_lookup, ir, il, iu, id)
+    delta_H_pn[i] = step!(H_pn, N, T, exponent_lookup, ir, il, iu, id)
 end
+
