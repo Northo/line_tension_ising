@@ -35,11 +35,11 @@ end
 
 
 function neighbor_interaction(H, i_y, i_x, ir, il, iu, id)
-    neighbors = [c*H[idy, idx] for (idy, idx, c) in [
-        ir[i_y, i_x],       # Right
-        il[i_y, i_x],       # Left
-        (iu[i_y], i_x, 1),  # Up
-        (id[i_y], i_x, 1),  # Down
+    neighbors = [H[idy, idx] for (idy, idx) in [
+        (i_y, ir[i_x]),  # Right
+        (i_y, il[i_x]),  # Left
+        (iu[i_y], i_x),  # Up
+        (id[i_y], i_x),  # Down
     ]]
     return neighbors
 end
@@ -81,8 +81,8 @@ function step!(
     N::Int,
     T,
     exponent_lookup::AbstractVector,
-    ir::AbstractArray,
-    il::AbstractArray,
+    ir::AbstractVector,
+    il::AbstractVector,
     iu::AbstractVector,
     id::AbstractVector,
 )
@@ -293,15 +293,14 @@ function get_index_vectors(Nx, Ny)
     conditions such as periodic boundaries
     must be added"""
 
-    ir = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
-    il = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
-
+    ir = Vector{Integer}(undef, Nx)
+    il = Vector{Integer}(undef, Nx)
     iu = Vector{Integer}(undef, Ny)
     id = Vector{Integer}(undef, Ny)
     for index in CartesianIndices((1:Ny, 1:Nx))
         y,x = Tuple(index)
-        ir[y, x] = (y, x+1, 1)
-        il[y, x] = (y, x-1, 1)
+        ir[x] = x+1
+        il[x] = x-1
         iu[y] = y+1
         id[y] = y-1
     end
@@ -316,14 +315,14 @@ function get_pp_index_vectors(Nx, Ny)
     """
 
     ir, il, iu, id = get_index_vectors(Nx+2, Ny)
-    for y in 1:Ny
-        il[y, 1] = (y, Nx+1, 1)     # Positive column
-        il[y, Nx+1] = (y, Nx+1, 1)  # Leftmost column links to itself
-        il[y, Nx+2] = (y, Nx, 1)    # Rightmost column
-        ir[y, Nx] = (y, Nx+2, 1)    # Positive/negative column
-        ir[y, Nx+2] = (y, Nx+2, 1)  # Rightmost column links to itself
-        ir[y, Nx+1] = (y, 1, 1)     # Leftmost column
-    end
+
+    il[1] = Nx+1     # Positive column
+    il[Nx+1] = Nx+1  # Leftmost column links to itself
+    il[Nx+2] = Nx   # Rightmost column
+    ir[Nx] = Nx+2    # Positive/negative column
+    ir[Nx+2] = Nx+2  # Rightmost column links to itself
+    ir[Nx+1] = 1     # Leftmost column
+
     iu[Ny] = 1
     id[1] = Ny
 
@@ -334,8 +333,8 @@ end
 function get_torus_index_vectors(Nx, Ny)
     ir, il, iu, id = get_index_vectors(Nx, Ny)
     # Connect the edges
-    ir[:, Nx] = [(y, 1, 1) for y in 1:Ny]
-    il[:, 1] = [(y, Nx, 1) for y in 1:Ny]
+    ir[Nx] = 1
+    il[1] = Nx
     iu[Ny] = 1
     id[1] = Ny
     return ir, il, iu, id
