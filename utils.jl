@@ -6,9 +6,22 @@
     - If accepted do change, if not reject
 """
 
-function get_random_Hamiltonian(Nx::Int, Ny::Int)
+function get_random_hamiltonian(Nx::Int, Ny::Int)
     H = rand([1, -1], (Ny, Nx))
     return H
+end
+
+
+function get_pp_pn_hamiltonian(Nx, Ny)
+    H_pp = get_random_hamiltonian(Nx+2, Ny)
+    H_pn = copy(H_pp)
+
+    # Set fixed positive/negative columns
+    H_pp[:, [end-1, end]] .= +1
+    H_pn[:, [end-1]] .= +1
+    H_pn[:, [end]] .= -1
+
+    return H_pp, H_pn
 end
 
 
