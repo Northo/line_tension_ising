@@ -111,6 +111,30 @@ function step!(
 end
 
 
+function simulate!(H, N, T, N_steps, ir, il, iu, id)
+    delta_H_pp = zeros(N_steps)
+    delta_H_pn = zeros(N_steps)
+    exponent_lookup = get_exponent_lookup(T)
+
+    for i in 1:N_steps
+        delta_H_pp[i], delta_H_pn[i] = step!(H, N, T, exponent_lookup, ir, il, iu, id)
+    end
+
+    return delta_H_pp, delta_H_pn
+end
+
+
+function calculate_tau(H_1, H_2, T, t_eq)
+    """Finds Tau*Ny"""
+    # Ratio between partition functions
+    party_ratio = exp.((H_1[t_eq:end] - H_2[t_eq:end])/T)
+    # Find expectation value
+    party_ratio_mean = mean(party_ratio)
+    tau = -T * log.(party_ratio_mean)
+    return tau
+end
+
+
 function get_index_vectors(Nx, Ny)
     """Create index lookup tables.
     Note that the ends simple go out of bound,
