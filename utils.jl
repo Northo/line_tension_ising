@@ -191,12 +191,29 @@ function simulate_over_T!(T_range, H, H_0_pp, H_0_pn, N, N_sweeps, ir, il, iu, i
 end
 
 
-function simulate_over_N!(N_range, N_sweeps)
-    tau_list = zero(N_range)
+function simulate_over_N(Nx_range, N_sweeps, T)
+    N_tau_list = zeros(length(Nx_range))
+    for (i, Nx) in enumerate(Nx_range)
+        Ny = Nx
+        N = Nx*Ny
+        ir, il, iu, id = get_pp_pn_index_vectors(Nx, Ny)
+        H_pp, H_pn = get_pp_pn_hamiltonian(Nx, Ny)
 
-    for (i, N) in enumerate(T_range)
-        
+        H_0_pp = calculate_energy(H_pp, ir, il, iu, id)
+        H_0_pn = calculate_energy(H_pn, ir, il, iu, id)
+
+        delta_H_pp, delta_H_pn = simulate!(H_pp, N, T, N_sweeps, ir, il, iu, id)
+        H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
+        H_pn_time = H_0_pn .+ cumsum(delta_H_pp + delta_H_pn)*4
+
+        N_tau = calculate_tau(H_pp_time, H_pn_time, T, N_sweep_eq)
+        tau = N_tau / Ny
+        N_tau_list[i] = N_tau
+        println("Nx: $Nx")
+        println(" .tau: $tau, Ntau: $N_tau")
     end
+
+    return N_tau_list
 end
 
 
