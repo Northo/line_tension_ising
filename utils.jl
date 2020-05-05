@@ -57,6 +57,25 @@ function calculate_energy(H, ir, il, iu, id)
 end
 
 
+function pp_pn_difference(H, Ny, Nx)
+    """Calculates H_pn - H_pp"""
+    return 2*sum(H[:, Nx])
+end
+
+
+function torus_klein_difference(H, Ny, Nx)
+    """Calculates H_k - H_t"""
+    # sum = 0
+    # for y in 1:Ny
+    #     sum -= H[y, 1]*(H[y, Nx] + H[Ny+1-y, Nx])
+    # end
+    return -sum(
+        H[:, 1] .*
+        (H[:, Nx] .+ Iterators.reverse(H[:, Nx]))
+    )
+end
+
+
 function step!(
     H::AbstractArray,
     N::Int,
@@ -142,7 +161,7 @@ end
 
 
 
-function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id; difference_method=pp_pn_difference)
     N = Nx*Ny
     delta_H_pp = zeros(N_sweeps)
     m = zeros(N_sweeps)
@@ -152,7 +171,7 @@ function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id)
     delta_H_pp_sweep::Int = 0
 
     for i in 1:N_sweeps
-        m[i] = 2*sum(H[:, Nx])
+        m[i] = difference_method(H, Ny, Nx)
         delta_H_pp[i] = sweep!(
             H,
             delta_H_pp_sweep,
@@ -202,7 +221,7 @@ function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, ir, il, iu, id)
     tau_list = zero(T_range)
 
     for (i, T) in enumerate(T_range)
-        delta_H_pp, m = simulate!(H_pp, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+        delta_H_pp, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id)
         H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
 
         N_tau = calculate_tau(m, T, N_sweep_eq)
