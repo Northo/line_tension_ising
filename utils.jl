@@ -114,7 +114,7 @@ function get_index_vectors(Nx, Ny)
     iu = Vector{Integer}(undef, Ny)
     id = Vector{Integer}(undef, Ny)
     for index in CartesianIndices((1:Ny, 1:Nx))
-        x,y = Tuple(index)
+        y,x = Tuple(index)
         ir[x] = x+1
         il[x] = x-1
         iu[y] = y+1
