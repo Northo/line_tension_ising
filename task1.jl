@@ -38,10 +38,10 @@ H_pn[:, end] .= -1
 # Fix boundary conditions
 ir, il, iu, id = get_index_vectors(Nx+2, Ny)
 il[1] = Nx+1  # positive column
-il[Nx+1] = Nx+2
+il[Nx+1] = Nx+1
 il[Nx+2] = Nx
 ir[Nx] = Nx+2  # positive/negative column
-ir[Nx+2] = Nx+1
+ir[Nx+2] = Nx+2
 ir[Nx+1] = 1
 iu[Ny] = 1
 id[1] = Ny
