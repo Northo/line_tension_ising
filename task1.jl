@@ -21,7 +21,7 @@ Ny+            +/-   |
 #########
 
 Tc = 2.26919 # Tc = 2.269 from analytical
-N_sweeps = 50000
+N_sweeps = 100000
 N_sweep_eq = 20000
 
 # ## Simulate over T ##
@@ -56,7 +56,7 @@ N_sweep_eq = 20000
 ## Simulate over N ##
 Nx = [2, 4, 6, 8, 10, 20, 30, 40]
 T = Tc
-tau = simulate_over_N(Nx, N_sweeps, T)
+tau = simulate_over_N(Nx, N_sweeps, T, T_hamil=:zero, t_sample=100)
 
 println("Importing PyPlot...")
 using PyPlot

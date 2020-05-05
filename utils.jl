@@ -217,7 +217,7 @@ function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, ir, il, iu, id)
 end
 
 
-function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf)
+function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf, t_sample=1)
     N_tau_list = zeros(length(Nx_range))
     for (i, Nx) in enumerate(Nx_range)
         Ny = Nx
@@ -230,7 +230,7 @@ function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf)
         delta_H_pp, m = simulate!(H_pp, Nx, Ny, T, N_sweeps, ir, il, iu, id)
         H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
 
-        N_tau = calculate_tau(m, T, N_sweep_eq, t_sample=1000)
+        N_tau = calculate_tau(m, T, N_sweep_eq, t_sample=t_sample)
         tau = N_tau / Ny
         N_tau_list[i] = N_tau
         println("Nx: $Nx")
