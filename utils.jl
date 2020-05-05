@@ -124,6 +124,28 @@ function simulate!(H, N, T, N_steps, ir, il, iu, id)
 end
 
 
+function simulate_over_T!(T_range, H, H_0_pp, H_0_pn, N, N_steps, ir, il, iu, id)
+    tau_list = zeros(N_steps)
+
+    for (i, T) in enumerate(T_range)
+        delta_H_pp, delta_H_pn = simulate!(H_pp, N, T, N_steps, ir, il, iu, id)
+        H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
+        H_pn_time = H_0_pn .+ cumsum(delta_H_pp + delta_H_pn)*4
+
+        N_tau = calculate_tau(H_pp_time, H_pn_time, T, 100000)
+        tau = N_tau / Ny
+        tau_list[i] = tau
+        println("T: $T")
+        println(" .tau: $tau, Ntau: $N_tau")
+
+        H_0_pp = H_pp_time[end]
+        H_0_pn = H_pn_time[end]
+    end
+
+    return tau_list
+end
+
+
 function calculate_tau(H_1, H_2, T, t_eq)
     """Finds Tau*Ny"""
     # Ratio between partition functions
