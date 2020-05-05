@@ -34,17 +34,23 @@ function get_pp_hamiltonian(Nx, Ny; T=:inf)
 end
 
 
+function neighbor_interaction(H, i_y, i_x, ir, il, iu, id)
+    neighbors = [c*H[idy, idx] for (idy, idx, c) in [
+        ir[i_y, i_x],       # Right
+        il[i_y, i_x],       # Left
+        (iu[i_y], i_x, 1),  # Up
+        (id[i_y], i_x, 1),  # Down
+    ]]
+    return neighbors
+end
+
+
 function calculate_energy(H, ir, il, iu, id)
     total_energy = 0
 
     for i in CartesianIndices(H)
         s_i_y, s_i_x = Tuple(i)
-        neighbors = [H[idy, idx] for (idy, idx) in [
-            (s_i_y, ir[s_i_x]),  # Right
-            (s_i_y, il[s_i_x]),  # Left
-            (iu[s_i_y], s_i_x),  # Up
-            (id[s_i_y], s_i_x),  # Down
-        ]]
+        neighbors = neighbor_interaction(H, s_i_y, s_i_x, ir, il, iu, id)
         total_energy -= 1/2 * flipsign(sum(neighbors), H[i])
     end
     return total_energy
@@ -56,8 +62,8 @@ function step!(
     N::Int,
     T,
     exponent_lookup::AbstractVector,
-    ir::AbstractVector,
-    il::AbstractVector,
+    ir::AbstractArray,
+    il::AbstractArray,
     iu::AbstractVector,
     id::AbstractVector,
 )
@@ -84,13 +90,8 @@ function step!(
     s_i = rand(1:N)  # Spin to flip
     s_i_cartesian = CartesianIndices(H)[s_i]
     s_i_y, s_i_x = Tuple(s_i_cartesian)
-    neighbors = [H[idy, idx] for (idy, idx) in [
-        (s_i_y, ir[s_i_x]),  # Right
-        (s_i_y, il[s_i_x]),  # Left
-        (iu[s_i_y], s_i_x),  # Up
-        (id[s_i_y], s_i_x),  # Down
-    ]]
 
+    neighbors = neighbor_interaction(H, s_i_y, s_i_x, ir, il, iu, id)
     spin = H[s_i]
     neighbor_sum = sum(neighbors)
 
@@ -265,14 +266,15 @@ function get_index_vectors(Nx, Ny)
     conditions such as periodic boundaries
     must be added"""
 
-    ir = Vector{Integer}(undef, Nx)
-    il = Vector{Integer}(undef, Nx)
-    iu = Vector{Integer}(undef, Ny)
-    id = Vector{Integer}(undef, Ny)
+    ir = Array{Tuple{UInt8, UInt8, UInt8}, 2}(undef, Ny, Nx)
+    il = Array{Tuple{UInt8, UInt8, UInt8}, 2}(undef, Ny, Nx)
+
+    iu = Vector{UInt8}(undef, Ny)
+    id = Vector{UInt8}(undef, Ny)
     for index in CartesianIndices((1:Ny, 1:Nx))
         y,x = Tuple(index)
-        ir[x] = x+1
-        il[x] = x-1
+        ir[y, x] = (y, x+1, 1)
+        il[y, x] = (y, x-1, 1)
         iu[y] = y+1
         id[y] = y-1
     end
@@ -287,12 +289,14 @@ function get_pp_index_vectors(Nx, Ny)
     """
 
     ir, il, iu, id = get_index_vectors(Nx+2, Ny)
-    il[1] = Nx+1  # Positive column
-    il[Nx+1] = Nx+1  # Leftmost column links to itself
-    il[Nx+2] = Nx  # Rightmost column
-    ir[Nx] = Nx+2  # Positive/negative column
-    ir[Nx+2] = Nx+2  # Rightmost column links to itself
-    ir[Nx+1] = 1  # Leftmost column
+    for y in 1:Ny
+        il[y, 1] = (y, Nx+1, 1)     # Positive column
+        il[y, Nx+1] = (y, Nx+1, 1)  # Leftmost column links to itself
+        il[y, Nx+2] = (y, Nx, 1)    # Rightmost column
+        ir[y, Nx] = (y, Nx+2, 1)    # Positive/negative column
+        ir[y, Nx+2] = (y, Nx+2, 1)  # Rightmost column links to itself
+        ir[y, Nx+1] = (y, 1, 1)     # Leftmost column
+    end
     iu[Ny] = 1
     id[1] = Ny
 
@@ -303,8 +307,22 @@ end
 function get_torus_index_vectors(Nx, Ny)
     ir, il, iu, id = get_index_vectors(Nx, Ny)
     # Connect the edges
-    ir[Nx] = 1
-    il[1] = Nx
+    ir[:, Nx] = [(y, 1, 1) for y in 1:Ny]
+    il[:, 1] = [(y, Nx, 1) for y in 1:Ny]
+    iu[Ny] = 1
+    id[1] = Ny
+    return ir, il, iu, id
+end
+
+
+function get_klein_index_vectors(Nx, Ny)
+    ir, il, iu, id = get_index_vectors(Nx, Ny)
+    # Connect the Mobius band
+    for y in 1:Ny
+        ir[y, Nx] = (Ny+1-y, 1, -1)
+        il[y, 1] = (Ny+1-y, Nx, -1)
+    end
+    # Connect the periodic BC in y
     iu[Ny] = 1
     id[1] = Ny
     return ir, il, iu, id
