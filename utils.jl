@@ -166,6 +166,37 @@ function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id)
 end
 
 
+function compare_initial_H(Nx, Ny, T, N_sweeps)
+    ## Setup ##
+    ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
+    H_inf = get_pp_hamiltonian(Nx, Ny, T=:inf)
+    H_zero = get_pp_hamiltonian(Nx, Ny, T=:zero)
+    H_0_inf = calculate_energy(H_inf, ir, il, iu, id)
+    H_0_zero = calculate_energy(H_zero, ir, il, iu, id)
+
+    ## Simulate ##
+    delta_H_inf, m_inf = simulate!(H_inf, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+    delta_H_zero, m_zero = simulate!(H_zero, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+
+    H_inf_time = H_0_inf .+ cumsum(delta_H_inf)
+    H_zero_time = H_0_zero .+ cumsum(delta_H_zero)
+
+    return H_inf_time, H_zero_time, m_inf, m_zero
+end
+
+function compare_and_plot_initial_H(Nx, Ny, T, N_sweeps)
+    H_inf_time, H_zero_time, m_inf, m_zero = compare_initial_H(Nx, Ny, T, N_sweeps)
+    plt.plot(H_inf_time, label="H++ inf")
+    plt.plot(H_inf_time + m_inf, label="H+- inf")
+    plt.plot(H_zero_time, label="H++ zero")
+    plt.plot(H_zero_time + m_zero, label="H+- zero")
+    plt.legend()
+    plt.show()
+
+    return H_inf_time, H_zero_time, m_inf, m_zero
+end
+
+
 function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, ir, il, iu, id)
     tau_list = zero(T_range)
 
