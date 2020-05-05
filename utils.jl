@@ -217,20 +217,20 @@ function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, ir, il, iu, id)
 end
 
 
-function simulate_over_N(Nx_range, N_sweeps, T)
+function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf)
     N_tau_list = zeros(length(Nx_range))
     for (i, Nx) in enumerate(Nx_range)
         Ny = Nx
         N = Nx*Ny
         ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
-        H_pp = get_pp_hamiltonian(Nx, Ny)
+        H_pp = get_pp_hamiltonian(Nx, Ny, T=T_hamil)
 
         H_0_pp = calculate_energy(H_pp, ir, il, iu, id)
 
         delta_H_pp, m = simulate!(H_pp, Nx, Ny, T, N_sweeps, ir, il, iu, id)
-        H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
+        H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
 
-        N_tau = calculate_tau(m, T, N_sweep_eq)
+        N_tau = calculate_tau(m, T, N_sweep_eq, t_sample=1000)
         tau = N_tau / Ny
         N_tau_list[i] = N_tau
         println("Nx: $Nx")
@@ -241,10 +241,10 @@ function simulate_over_N(Nx_range, N_sweeps, T)
 end
 
 
-function calculate_tau(diff, T, t_eq)
+function calculate_tau(diff, T, t_eq; t_sample=1)
     """Finds Tau*Ny"""
     # Ratio between partition functions
-    party_ratio = exp.(-diff[t_eq:end]/T)
+    party_ratio = exp.(-diff[t_eq:t_sample:end]/T)
     # Find expectation value
     party_ratio_mean = mean(party_ratio)
     tau = -T * log.(party_ratio_mean)
