@@ -12,16 +12,12 @@ function get_random_hamiltonian(Nx::Int, Ny::Int)
 end
 
 
-function get_pp_pn_hamiltonian(Nx, Ny)
+function get_pp_hamiltonian(Nx, Ny)
     H_pp = get_random_hamiltonian(Nx+2, Ny)
-    H_pn = copy(H_pp)
-
     # Set fixed positive/negative columns
     H_pp[:, [end-1, end]] .= +1
-    H_pn[:, [end-1]] .= +1
-    H_pn[:, [end]] .= -1
 
-    return H_pp, H_pn
+    return H_pp
 end
 
 
@@ -109,17 +105,9 @@ function step!(
 
     if accept == true
         H[s_i] = -spin
-        if s_i_x == Nx
-            # If we are at the negative border,
-            # going from ++ to +- gives a change
-            # in H of -4spin. Note, here we work
-            # with H foruths.
-            return delta_H_fourth, -spin
-        else
-            return delta_H_fourth, 0
-        end
+        return delta_H_fourth
     else
-        return 0, 0
+        return 0
     end
 end
 
@@ -127,37 +115,33 @@ end
 function sweep!(
     H,
     delta_H_pp,
-    delta_H_pn,
     N,
     T,
     exponent_lookup,
     ir, il, iu, id
 )
     for i in 1:N
-        pp, pn = step!(H, N, T, exponent_lookup, ir, il, iu, id)
-        delta_H_pp += pp
-        delta_H_pn += pn
+        delta_H_pp += step!(H, N, T, exponent_lookup, ir, il, iu, id)
     end
-
-    return delta_H_pp, delta_H_pn
+    return delta_H_pp
 end
 
 
 
-function simulate!(H, N, T, N_sweeps, ir, il, iu, id)
+function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+    N = Nx*Ny
     delta_H_pp = zeros(N_sweeps)
-    delta_H_pn = zeros(N_sweeps)
+    m = zeros(N_sweeps)
     exponent_lookup = get_exponent_lookup(T)
 
     # Used per sweep, allocate now
     delta_H_pp_sweep::Int = 0
-    delta_H_pn_sweep::Int = 0
 
     for i in 1:N_sweeps
-        delta_H_pp[i], delta_H_pn[i] = sweep!(
+        m[i] = 2*sum(H[:, Nx])
+        delta_H_pp[i] = sweep!(
             H,
             delta_H_pp_sweep,
-            delta_H_pn_sweep,
             N,
             T,
             exponent_lookup,
@@ -165,26 +149,24 @@ function simulate!(H, N, T, N_sweeps, ir, il, iu, id)
         )
     end
 
-    return delta_H_pp, delta_H_pn
+    return delta_H_pp, m
 end
 
 
-function simulate_over_T!(T_range, H, H_0_pp, H_0_pn, N, N_sweeps, ir, il, iu, id)
+function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, ir, il, iu, id)
     tau_list = zero(T_range)
 
     for (i, T) in enumerate(T_range)
-        delta_H_pp, delta_H_pn = simulate!(H_pp, N, T, N_sweeps, ir, il, iu, id)
+        delta_H_pp, m = simulate!(H_pp, Nx, Ny, T, N_sweeps, ir, il, iu, id)
         H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
-        H_pn_time = H_0_pn .+ cumsum(delta_H_pp + delta_H_pn)*4
 
-        N_tau = calculate_tau(H_pp_time, H_pn_time, T, N_sweep_eq)
+        N_tau = calculate_tau(m, T, N_sweep_eq)
         tau = N_tau / Ny
         tau_list[i] = tau
         println("T: $T")
         println(" .tau: $tau, Ntau: $N_tau")
 
         H_0_pp = H_pp_time[end]
-        H_0_pn = H_pn_time[end]
     end
 
     return tau_list
@@ -196,17 +178,15 @@ function simulate_over_N(Nx_range, N_sweeps, T)
     for (i, Nx) in enumerate(Nx_range)
         Ny = Nx
         N = Nx*Ny
-        ir, il, iu, id = get_pp_pn_index_vectors(Nx, Ny)
-        H_pp, H_pn = get_pp_pn_hamiltonian(Nx, Ny)
+        ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
+        H_pp = get_pp_hamiltonian(Nx, Ny)
 
         H_0_pp = calculate_energy(H_pp, ir, il, iu, id)
-        H_0_pn = calculate_energy(H_pn, ir, il, iu, id)
 
-        delta_H_pp, delta_H_pn = simulate!(H_pp, N, T, N_sweeps, ir, il, iu, id)
+        delta_H_pp, m = simulate!(H_pp, Nx, Ny, T, N_sweeps, ir, il, iu, id)
         H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
-        H_pn_time = H_0_pn .+ cumsum(delta_H_pp + delta_H_pn)*4
 
-        N_tau = calculate_tau(H_pp_time, H_pn_time, T, N_sweep_eq)
+        N_tau = calculate_tau(m, T, N_sweep_eq)
         tau = N_tau / Ny
         N_tau_list[i] = N_tau
         println("Nx: $Nx")
@@ -217,10 +197,10 @@ function simulate_over_N(Nx_range, N_sweeps, T)
 end
 
 
-function calculate_tau(H_1, H_2, T, t_eq)
+function calculate_tau(diff, T, t_eq)
     """Finds Tau*Ny"""
     # Ratio between partition functions
-    party_ratio = exp.((H_1[t_eq:end] - H_2[t_eq:end])/T)
+    party_ratio = exp.(-diff[t_eq:end]/T)
     # Find expectation value
     party_ratio_mean = mean(party_ratio)
     tau = -T * log.(party_ratio_mean)
@@ -250,7 +230,7 @@ function get_index_vectors(Nx, Ny)
 end
 
 
-function get_pp_pn_index_vectors(Nx, Ny)
+function get_pp_index_vectors(Nx, Ny)
     """Get index vector for the ++/+- system of
     size Nx+2 x Ny.
     """
