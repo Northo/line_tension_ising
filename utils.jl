@@ -123,7 +123,7 @@ function sweep!(
     for i in 1:N
         delta_H_pp += step!(H, N, T, exponent_lookup, ir, il, iu, id)
     end
-    return delta_H_pp
+    return delta_H_pp*4  # Multiply by 4, because result from step is /4
 end
 
 
@@ -158,7 +158,7 @@ function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, ir, il, iu, id)
 
     for (i, T) in enumerate(T_range)
         delta_H_pp, m = simulate!(H_pp, Nx, Ny, T, N_sweeps, ir, il, iu, id)
-        H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
+        H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
 
         N_tau = calculate_tau(m, T, N_sweep_eq)
         tau = N_tau / Ny
