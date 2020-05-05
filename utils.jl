@@ -12,8 +12,21 @@ function get_random_hamiltonian(Nx::Int, Ny::Int)
 end
 
 
-function get_pp_hamiltonian(Nx, Ny)
-    H_pp = get_random_hamiltonian(Nx+2, Ny)
+function get_zero_T_hamiltonian(Nx::Int, Ny::Int)
+    H = ones(Int, (Ny, Nx))
+    return H
+end
+
+
+function get_pp_hamiltonian(Nx, Ny; T=:inf)
+    if T==:inf
+        H_pp = get_random_hamiltonian(Nx+2, Ny)
+    elseif T==:zero
+        H_pp = get_zero_T_hamiltonian(Nx+2, Ny)
+    else
+        throw(ArgumentError("T must be :inf or :zero, got $(repr(T))"))
+    end
+
     # Set fixed positive/negative columns
     H_pp[:, [end-1, end]] .= +1
 
