@@ -60,10 +60,9 @@ for i in t_space
     delta_H_pp[i], delta_H_pn[i] = step!(H_pp, N, T, exponent_lookup, ir, il, iu, id)
 end
 
-H_pp_time = H_0_pp .+ (cumsum(delta_H_pp*4))
-H_pn_time = H_0_pn .+ (cumsum((delta_H_pp + delta_H_pn)*4))
+H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
+H_pn_time = H_0_pn .+ cumsum(delta_H_pp + delta_H_pn)*4
 
 party_ratio = exp.((H_pp_time - H_pn_time)/T)
-party_ratio_exp_val = mean(party_ratio[150000:end])
+party_ratio_exp_val = mean(party_ratio[100000:end])
 tau = - T/Ny * log.(party_ratio_exp_val)
-println(tau)

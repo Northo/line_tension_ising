@@ -97,7 +97,11 @@ function step!(
     if accept == true
         H[s_i] = -spin
         if s_i_x == Nx
-            return delta_H_fourth, -4*spin
+            # If we are at the negative border,
+            # going from ++ to +- gives a change
+            # in H of -4spin. Note, here we work
+            # with H foruths.
+            return delta_H_fourth, -spin
         else
             return delta_H_fourth, 0
         end
