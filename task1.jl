@@ -21,9 +21,9 @@ Ny+            +/-   |
 #########
 Nx, Ny = 30, 30
 N = Nx*Ny
-T = 0.9 * 2.269  # Tc = 2.269 from analytical
-println("T: $T")
-N_steps = 200000
+Tc = 2.269  # Tc = 2.269 from analytical
+N_sweeps = 10000
+N_sweep_eq = 4000
 
 H_pp = get_random_Hamiltonian(Nx+2, Ny)
 H_pn = copy(H_pp)
@@ -36,15 +36,7 @@ H_pn[:, end-1] .= +1
 H_pn[:, end] .= -1
 
 # Fix boundary conditions
-ir, il, iu, id = get_index_vectors(Nx+2, Ny)
-il[1] = Nx+1  # positive column
-il[Nx+1] = Nx+1
-il[Nx+2] = Nx
-ir[Nx] = Nx+2  # positive/negative column
-ir[Nx+2] = Nx+2
-ir[Nx+1] = 1
-iu[Ny] = 1
-id[1] = Ny
+ir, il, iu, id = get_pp_pn_index_vectors(Nx, Ny)
 
 # Initial energies
 H_0_pp = calculate_energy(H_pp, ir, il, iu, id)
@@ -53,13 +45,27 @@ H_0_pn = calculate_energy(H_pn, ir, il, iu, id)
 #######
 # Run #
 #######
-delta_H_pp, delta_H_pn = simulate!(H_pp, N, T, N_steps, ir, il, iu, id)
+T = collect(0.2:0.2:1.5)
+tau = simulate_over_T!(
+    T * Tc,
+    H_pp,
+    H_0_pp,
+    H_0_pn,
+    N,
+    N_sweeps,
+    ir,
+    il,
+    iu,
+    id
+)
 
-H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
-H_pn_time = H_0_pn .+ cumsum(delta_H_pp + delta_H_pn)*4
+println("Importing PyPlot...")
+using PyPlot
+println("PyPlot imported.")
+plt.plot(T, tau)
+plt.show()
 
-N_tau = calculate_tau(H_pp_time, H_pn_time, T, 100000)
-
-
-#tau = N_tau / Ny
-#println(tau, " : ", N_tau)
+# T = 0.3 * Tc
+# delta_H_pp, delta_H_pn = simulate!(H_pp, N, T, N_sweeps, ir, il, iu, id)
+# H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
+# H_pn_time = H_0_pn .+ cumsum(delta_H_pp + delta_H_pn)*4

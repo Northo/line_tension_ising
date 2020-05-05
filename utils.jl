@@ -111,28 +111,60 @@ function step!(
 end
 
 
-function simulate!(H, N, T, N_steps, ir, il, iu, id)
-    delta_H_pp = zeros(N_steps)
-    delta_H_pn = zeros(N_steps)
-    exponent_lookup = get_exponent_lookup(T)
-
-    for i in 1:N_steps
-        delta_H_pp[i], delta_H_pn[i] = step!(H, N, T, exponent_lookup, ir, il, iu, id)
+function sweep!(
+    H,
+    delta_H_pp,
+    delta_H_pn,
+    N,
+    T,
+    exponent_lookup,
+    ir, il, iu, id
+)
+    for i in 1:N
+        pp, pn = step!(H, N, T, exponent_lookup, ir, il, iu, id)
+        delta_H_pp += pp
+        delta_H_pn += pn
     end
 
     return delta_H_pp, delta_H_pn
 end
 
 
-function simulate_over_T!(T_range, H, H_0_pp, H_0_pn, N, N_steps, ir, il, iu, id)
-    tau_list = zeros(N_steps)
+
+function simulate!(H, N, T, N_sweeps, ir, il, iu, id)
+    delta_H_pp = zeros(N_sweeps)
+    delta_H_pn = zeros(N_sweeps)
+    exponent_lookup = get_exponent_lookup(T)
+
+    # Used per sweep, allocate now
+    delta_H_pp_sweep::Int = 0
+    delta_H_pn_sweep::Int = 0
+
+    for i in 1:N_sweeps
+        delta_H_pp[i], delta_H_pn[i] = sweep!(
+            H,
+            delta_H_pp_sweep,
+            delta_H_pn_sweep,
+            N,
+            T,
+            exponent_lookup,
+            ir, il, iu, id,
+        )
+    end
+
+    return delta_H_pp, delta_H_pn
+end
+
+
+function simulate_over_T!(T_range, H, H_0_pp, H_0_pn, N, N_sweeps, ir, il, iu, id)
+    tau_list = zero(T_range)
 
     for (i, T) in enumerate(T_range)
-        delta_H_pp, delta_H_pn = simulate!(H_pp, N, T, N_steps, ir, il, iu, id)
+        delta_H_pp, delta_H_pn = simulate!(H_pp, N, T, N_sweeps, ir, il, iu, id)
         H_pp_time = H_0_pp .+ cumsum(delta_H_pp)*4
         H_pn_time = H_0_pn .+ cumsum(delta_H_pp + delta_H_pn)*4
 
-        N_tau = calculate_tau(H_pp_time, H_pn_time, T, 100000)
+        N_tau = calculate_tau(H_pp_time, H_pn_time, T, N_sweep_eq)
         tau = N_tau / Ny
         tau_list[i] = tau
         println("T: $T")
@@ -143,6 +175,15 @@ function simulate_over_T!(T_range, H, H_0_pp, H_0_pn, N, N_steps, ir, il, iu, id
     end
 
     return tau_list
+end
+
+
+function simulate_over_N!(N_range, N_sweeps)
+    tau_list = zero(N_range)
+
+    for (i, N) in enumerate(T_range)
+        
+    end
 end
 
 
@@ -174,6 +215,25 @@ function get_index_vectors(Nx, Ny)
         iu[y] = y+1
         id[y] = y-1
     end
+
+    return ir, il, iu, id
+end
+
+
+function get_pp_pn_index_vectors(Nx, Ny)
+    """Get index vector for the ++/+- system of
+    size Nx+2 x Ny.
+    """
+
+    ir, il, iu, id = get_index_vectors(Nx+2, Ny)
+    il[1] = Nx+1  # Positive column
+    il[Nx+1] = Nx+1  # Leftmost column links to itself
+    il[Nx+2] = Nx  # Rightmost column
+    ir[Nx] = Nx+2  # Positive/negative column
+    ir[Nx+2] = Nx+2  # Rightmost column links to itself
+    ir[Nx+1] = 1  # Leftmost column
+    iu[Ny] = 1
+    id[1] = Ny
 
     return ir, il, iu, id
 end
