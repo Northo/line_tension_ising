@@ -148,14 +148,14 @@ function get_exponent_lookup(T)
     return table
 end
 
-Nx = 5
-Ny = 5
-N = Nx * Ny
-T = 1
+# Nx = 5
+# Ny = 5
+# N = Nx * Ny
+# T = 1
 
-H = get_random_Hamiltonian(Nx, Ny)
-exponent_lookup = get_exponent_lookup(T)
-ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
-for i in 1:100
-    step!(H, N, T, exponent_lookup, ir, il, iu, id)
-end
+# H = get_random_Hamiltonian(Nx, Ny)
+# exponent_lookup = get_exponent_lookup(T)
+# ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
+# for i in 1:100
+#     step!(H, N, T, exponent_lookup, ir, il, iu, id)
+# end
