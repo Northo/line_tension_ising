@@ -69,7 +69,7 @@ function torus_klein_difference(H, Ny, Nx)
     # for y in 1:Ny
     #     sum -= H[y, 1]*(H[y, Nx] + H[Ny+1-y, Nx])
     # end
-    return -sum(
+    return sum(
         H[:, 1] .*
         (H[:, Nx] .+ Iterators.reverse(H[:, Nx]))
     )
