@@ -281,7 +281,7 @@ function benchmark(N_sweeps, T, Nx, Ny)
 end
 
 
-function calculate_tau(diff, T, t_eq; t_sample=1)
+function calculate_tau(diff, T, t_eq=1; t_sample=1)
     """Finds Tau*Ny"""
     # Ratio between partition functions
     party_ratio = exp.(-diff[t_eq:t_sample:end]/T)
@@ -371,6 +371,29 @@ function get_exponent_lookup(T)
     table[1] = exp(-4/T)
     table[2] = exp(-8/T)
     return table
+end
+
+
+function bootstrap_tau(H_diff, T, N_resamples)
+    """Applies the bootstrap on tau calculations
+    H_diff is energy difference between two systems at equilibrium, with appropriate sample time.
+    N_resamples is the number of resamples that are carried out in the bootstrap method.
+
+    Returns:
+     E<tau>, std(tau)
+    """
+    n = length(H_diff)
+    taus = Vector(undef, N_resamples)
+    for i in 1:N_resamples
+        # Resample, with duplicates
+        random_sample = H_diff[rand(1:n, n)]
+        # Calculate using resample
+        taus[i] = calculate_tau(random_sample, T)
+    end
+    mean_tau = mean(taus)
+    std_tau = std(taus)
+
+    return mean_tau, std_tau
 end
 
 # Nx = 5
