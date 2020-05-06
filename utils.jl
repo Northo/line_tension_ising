@@ -241,6 +241,13 @@ function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf, t_sample=1)
 end
 
 
+function benchmark(N_sweeps, T, Nx, Ny)
+    ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
+    H = get_pp_hamiltonian(Nx, Ny)
+    simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+end
+
+
 function calculate_tau(diff, T, t_eq; t_sample=1)
     """Finds Tau*Ny"""
     # Ratio between partition functions
