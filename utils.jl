@@ -6,6 +6,10 @@
     - If accepted do change, if not reject
 """
 
+# Global constants
+Tc = 2.26919 # Tc = 2.269 from analytical
+
+
 function get_random_hamiltonian(Nx::Int, Ny::Int)
     H = rand([1, -1], (Ny, Nx))
     return H
@@ -92,7 +96,6 @@ function step!(
     ir, il, iu, id are lookups for index right, left, up, down
 
     TODO:
-     . Instead of evaluating exp(-DH/T), lookup preevaluated
      . Consider if one should change order of operations,
     to reduce operations. Ie. calculate acceptance_criterion
     before r, then throw away at once if DH < 0.

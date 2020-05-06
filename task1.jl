@@ -20,7 +20,6 @@ Ny+            +/-   |
 # Setup #
 #########
 
-Tc = 2.26919 # Tc = 2.269 from analytical
 N_sweeps = 10000
 N_sweep_eq = 1000
 
