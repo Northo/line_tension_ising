@@ -223,7 +223,19 @@ function compare_and_plot_initial_H(Nx, Ny, T, N_sweeps)
 end
 
 
-function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, N_sweep_eq, ir, il, iu, id; difference_function=pp_pn_difference, bootstrap=false)
+function simulate_over_T!(
+    T_range,
+    H,
+    H_0_pp,
+    Nx,
+    Ny,
+    N_sweeps,
+    N_sweep_eq,
+    ir, il, iu, id;
+    t_sample=1,  # Step for selecting measurements
+    difference_function=pp_pn_difference,
+    bootstrap=false,
+)
     tau_list = zero(T_range)
     if bootstrap
         tau_std_list = zero(T_range)
@@ -234,11 +246,11 @@ function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, N_sweep_eq, ir, 
         H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
 
         if bootstrap
-            N_tau, N_tau_std = bootstrap_tau(m[N_sweep_eq:end], T, 100)
+            N_tau, N_tau_std = bootstrap_tau(m[N_sweep_eq:t_sample:end], T, 100)
             tau_std = N_tau_std/Ny
             tau_std_list[i] = tau_std
         else
-            N_tau = calculate_tau(m, T, N_sweep_eq)
+            N_tau = calculate_tau(m, T, N_sweep_eq, t_sample=t_sample)
         end
         tau = N_tau / Ny
         tau_list[i] = tau
