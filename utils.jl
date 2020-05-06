@@ -237,18 +237,26 @@ function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, ir, il, iu, id)
 end
 
 
-function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf, t_sample=1)
+function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf, t_sample=1, system=:pp)
     N_tau_list = zeros(length(Nx_range))
     for (i, Nx) in enumerate(Nx_range)
         Ny = Nx
         N = Nx*Ny
-        ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
-        H_pp = get_pp_hamiltonian(Nx, Ny, T=T_hamil)
 
-        H_0_pp = calculate_energy(H_pp, ir, il, iu, id)
+        if system == :pp
+            H = get_pp_hamiltonian(Nx, Ny)
+            ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
+        elseif system == :torus
+            H = get_random_hamiltonian(Nx, Ny)
+            ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
+        else
+            throw(ArgumentError("Invalid system"))
+        end
 
-        delta_H_pp, m = simulate!(H_pp, Nx, Ny, T, N_sweeps, ir, il, iu, id)
-        H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
+        H_0 = calculate_energy(H, ir, il, iu, id)
+
+        delta_H, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+        H_time = H_0 .+ cumsum(delta_H)
 
         N_tau = calculate_tau(m, T, N_sweep_eq, t_sample=t_sample)
         tau = N_tau / Ny
