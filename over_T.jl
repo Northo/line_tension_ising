@@ -29,11 +29,11 @@ println(filename)
 # Calculations #
 ################
 if system == :pp
-    H = get_pp_hamiltonian(Nx, Ny)
+    H = get_pp_hamiltonian(Nx, Ny, T=:zero)
     ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
     difference_function = pp_pn_difference
 elseif system == :torus
-    H = get_random_hamiltonian(Nx, Ny)
+    H = get_random_hamiltonian(Nx, Ny, T=:zero)
     ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
     difference_function = torus_klein_difference
 else
