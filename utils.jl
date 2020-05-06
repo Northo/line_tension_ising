@@ -223,14 +223,23 @@ function compare_and_plot_initial_H(Nx, Ny, T, N_sweeps)
 end
 
 
-function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, N_sweep_eq, ir, il, iu, id; difference_function=pp_pn_difference)
+function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, N_sweep_eq, ir, il, iu, id; difference_function=pp_pn_difference, bootstrap=false)
     tau_list = zero(T_range)
+    if bootstrap
+        tau_std_list = zero(T_range)
+    end
 
     for (i, T) in enumerate(T_range)
         delta_H_pp, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
         H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
 
-        N_tau = calculate_tau(m, T, N_sweep_eq)
+        if bootstrap
+            N_tau, N_tau_std = bootstrap_tau(m[N_sweep_eq:end], T, 100)
+            tau_std_list[i] = N_tau_std/Ny
+            println("b.$N_tau_std")
+        else
+            N_tau = calculate_tau(m, T, N_sweep_eq)
+        end
         tau = N_tau / Ny
         tau_list[i] = tau
         println("T: $T")
@@ -239,12 +248,30 @@ function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, N_sweep_eq, ir, 
         H_0_pp = H_pp_time[end]
     end
 
-    return tau_list
+    if bootstrap
+        return tau_list, tau_std_list
+    else
+        return tau_list
+    end
 end
 
 
-function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf, t_sample=1, system=:pp)
+function simulate_over_N(
+    Nx_range,
+    N_sweeps,
+    N_sweeps_eq,
+    T;
+    T_hamil=:inf,
+    t_sample=1,
+    system=:pp,
+    bootstrap=false,
+    N_resamples=100,  # For bootstrap
+)
     N_tau_list = zeros(length(Nx_range))
+    if bootstrap
+        N_tau_std_list = zeros(length(Nx_range))
+    end
+
     for (i, Nx) in enumerate(Nx_range)
         Ny = Nx
         N = Nx*Ny
@@ -266,14 +293,24 @@ function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf, t_sample=1, system
         delta_H, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
         H_time = H_0 .+ cumsum(delta_H)
 
-        N_tau = calculate_tau(m, T, N_sweep_eq, t_sample=t_sample)
+        if bootstrap
+            N_tau, N_tau_std = bootstrap_tau(m[N_sweeps_eq:t_sample:end], T, N_resamples)
+            N_tau_std_list[i] = N_tau_std
+        else
+            N_tau = calculate_tau(m, T, N_sweeps_eq, t_sample=t_sample)
+        end
+
         tau = N_tau / Ny
         N_tau_list[i] = N_tau
         println("Nx: $Nx")
         println(" .tau: $tau, Ntau: $N_tau")
     end
 
-    return N_tau_list
+    if bootstrap
+        return N_tau_list, N_tau_std_list
+    else
+        return N_tau_list
+    end
 end
 
 
