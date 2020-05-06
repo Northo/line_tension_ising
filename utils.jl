@@ -232,6 +232,7 @@ function simulate_over_T!(
     N_sweeps,
     N_sweep_eq,
     ir, il, iu, id;
+    N_resamples=100,
     t_sample=1,  # Step for selecting measurements
     difference_function=pp_pn_difference,
     bootstrap=false,
@@ -246,7 +247,7 @@ function simulate_over_T!(
         H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
 
         if bootstrap
-            N_tau, N_tau_std = bootstrap_tau(m[N_sweep_eq:t_sample:end], T, 100)
+            N_tau, N_tau_std = bootstrap_tau(m[N_sweep_eq:t_sample:end], T, N_resamples)
             tau_std = N_tau_std/Ny
             tau_std_list[i] = tau_std
         else

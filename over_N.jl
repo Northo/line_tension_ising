@@ -3,14 +3,16 @@ include("utils.jl")
 #########
 # Setup #
 #########
-N_sweeps = 10000
+N_sweeps = 500000
 N_sweeps_eq = 5000
+N_sample = 3
+N_resamples = 700  # Bootstrap
 T = Tc
-Nx = [2, 4, 6, 8, 10, 20, 30, 40]
-system = :pp
-#system = :torus
+Nx = [2, 4, 6, 8, 10, 20, 25]
+#system = :pp
+system = :torus
 
-plot = false
+plot = true
 write_to_file = true
 filename = string(
     "N_",
@@ -29,9 +31,10 @@ tau, tau_std = simulate_over_N(
     N_sweeps_eq,
     T,
     T_hamil=:zero,
-    t_sample=100,
+    t_sample=N_sample,
     bootstrap=true,
     system=:torus,
+    N_resamples=N_resamples,
 )
 
 if write_to_file
