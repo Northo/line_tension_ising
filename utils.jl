@@ -436,6 +436,45 @@ function bootstrap_tau(H_diff, T, N_resamples)
     return mean_tau, std_tau
 end
 
+
+function plot_tau_X(X, tau, tau_std=undef)
+    if tau_std!=undef
+        plt.errorbar(X, tau, yerr=tau_std)
+    else
+        plt.plot(X, tau)
+    end
+    plt.axhline(y=0, linestyle=":", color="gray", linewidth=0.3)
+    plt.axvline(x=1, linestyle=":", color="gray", linewidth=0.3)
+    plt.show()
+end
+
+
+function write_tau_X(X, tau, filename, tau_std=undef)
+    if tau_std==undef
+        writedlm(string("datadir/", filename, ".dat"), [X, tau])
+    else
+        writedlm(string("datadir/", filename, "_std.dat"), [X, tau, tau_std])
+
+
+    end
+end
+
+
+function read_tau_X(filename, tau_std=false)
+    if tau_std
+        data = readdlm(string("datadir/", filename, "_std.dat"))
+        X = data[1, :]
+        tau = data[2, :]
+        tau_std = data[3, :]
+        return X, tau, tau_std
+    else
+        data = readdlm(string("datadir/", filename, ".dat"))
+        X = data[1, :]
+        tau = data[2, :]
+        return X, tau
+    end
+
+end
 # Nx = 5
 # Ny = 5
 # N = Nx * Ny
