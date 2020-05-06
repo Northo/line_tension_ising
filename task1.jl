@@ -1,5 +1,4 @@
 include("utils.jl")
-using Statistics  # Mean
 
 """Original Mon Jasnow. ie.
 Periodic in y, positive/negative boundaries in x

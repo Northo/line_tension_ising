@@ -6,6 +6,9 @@
     - If accepted do change, if not reject
 """
 
+using Statistics  # Mean
+using DelimitedFiles
+
 # Global constants
 Tc = 2.26919 # Tc = 2.269 from analytical
 
