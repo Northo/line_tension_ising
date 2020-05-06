@@ -293,11 +293,11 @@ function get_index_vectors(Nx, Ny)
     conditions such as periodic boundaries
     must be added"""
 
-    ir = Array{Tuple{UInt8, UInt8, UInt8}, 2}(undef, Ny, Nx)
-    il = Array{Tuple{UInt8, UInt8, UInt8}, 2}(undef, Ny, Nx)
+    ir = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
+    il = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
 
-    iu = Vector{UInt8}(undef, Ny)
-    id = Vector{UInt8}(undef, Ny)
+    iu = Vector{Integer}(undef, Ny)
+    id = Vector{Integer}(undef, Ny)
     for index in CartesianIndices((1:Ny, 1:Nx))
         y,x = Tuple(index)
         ir[y, x] = (y, x+1, 1)
