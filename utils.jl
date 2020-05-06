@@ -491,6 +491,13 @@ function read_tau_X(filename, tau_std=false)
     end
 
 end
+
+
+function onsager(T)
+    """Gives onsagers solution to tau(T/Tc)"""
+    return 2 - Tc*T*log(coth(1/(T*Tc)))
+end
+
 # Nx = 5
 # Ny = 5
 # N = Nx * Ny
