@@ -21,7 +21,7 @@ Ny+            +/-   |
 #########
 
 N_sweeps = 10000
-N_sweep_eq = 1000
+N_sweep_eq = 5000
 
 #system = :pp
 system = :torus
@@ -33,9 +33,11 @@ N = Nx*Ny
 if system == :pp
     H = get_pp_hamiltonian(Nx, Ny)
     ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
+    difference_function = pp_pn_difference
 elseif system == :torus
     H = get_random_hamiltonian(Nx, Ny)
     ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
+    difference_function = torus_klein_difference
 else
     throw(ArgumentError("Invalid system"))
 end
@@ -52,10 +54,12 @@ tau = simulate_over_T!(
     Nx,
     Ny,
     N_sweeps,
+    N_sweep_eq,
     ir,
     il,
     iu,
-    id
+    id,
+    difference_function=difference_function
 )
 
 println("Importing PyPlot...")

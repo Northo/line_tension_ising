@@ -164,7 +164,7 @@ end
 
 
 
-function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id; difference_method=pp_pn_difference)
+function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id; difference_function=pp_pn_difference)
     N = Nx*Ny
     delta_H_pp = zeros(N_sweeps)
     m = zeros(N_sweeps)
@@ -174,7 +174,7 @@ function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id; difference_method=pp_
     delta_H_pp_sweep::Int = 0
 
     for i in 1:N_sweeps
-        m[i] = difference_method(H, Ny, Nx)
+        m[i] = difference_function(H, Ny, Nx)
         delta_H_pp[i] = sweep!(
             H,
             delta_H_pp_sweep,
@@ -220,11 +220,11 @@ function compare_and_plot_initial_H(Nx, Ny, T, N_sweeps)
 end
 
 
-function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, ir, il, iu, id)
+function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, N_sweep_eq, ir, il, iu, id; difference_function=pp_pn_difference)
     tau_list = zero(T_range)
 
     for (i, T) in enumerate(T_range)
-        delta_H_pp, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+        delta_H_pp, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
         H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
 
         N_tau = calculate_tau(m, T, N_sweep_eq)
@@ -249,16 +249,18 @@ function simulate_over_N(Nx_range, N_sweeps, T; T_hamil=:inf, t_sample=1, system
         if system == :pp
             H = get_pp_hamiltonian(Nx, Ny)
             ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
+            difference_function = pp_pn_difference
         elseif system == :torus
             H = get_random_hamiltonian(Nx, Ny)
             ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
+            difference_function = torus_klein_difference
         else
             throw(ArgumentError("Invalid system"))
         end
 
         H_0 = calculate_energy(H, ir, il, iu, id)
 
-        delta_H, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+        delta_H, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
         H_time = H_0 .+ cumsum(delta_H)
 
         N_tau = calculate_tau(m, T, N_sweep_eq, t_sample=t_sample)
