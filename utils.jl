@@ -235,15 +235,19 @@ function simulate_over_T!(T_range, H, H_0_pp, Nx, Ny, N_sweeps, N_sweep_eq, ir, 
 
         if bootstrap
             N_tau, N_tau_std = bootstrap_tau(m[N_sweep_eq:end], T, 100)
-            tau_std_list[i] = N_tau_std/Ny
-            println("b.$N_tau_std")
+            tau_std = N_tau_std/Ny
+            tau_std_list[i] = tau_std
         else
             N_tau = calculate_tau(m, T, N_sweep_eq)
         end
         tau = N_tau / Ny
         tau_list[i] = tau
         println("T: $T")
-        println(" .tau: $tau, Ntau: $N_tau")
+        if bootstrap
+            println(" .tau: $tau, Ntau: $N_tau, std: $tau_std")
+        else
+            println(" .tau: $tau, Ntau: $N_tau")
+        end
 
         H_0_pp = H_pp_time[end]
     end
