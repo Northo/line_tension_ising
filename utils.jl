@@ -45,8 +45,8 @@ function neighbor_interaction(H, i_y, i_x, ir, il, iu, id)
     neighbors = [c*H[idy, idx] for (idy, idx, c) in [
         ir[i_y, i_x],       # Right
         il[i_y, i_x],       # Left
-        (iu[i_y], i_x, 1),  # Up
-        (id[i_y], i_x, 1),  # Down
+        iu[i_y, i_x],       # Up
+        id[i_y, i_x],       # Down
     ]]
     return neighbors
 end
@@ -90,8 +90,8 @@ function step!(
     exponent_lookup::AbstractVector,
     ir::AbstractArray,
     il::AbstractArray,
-    iu::AbstractVector,
-    id::AbstractVector,
+    iu::AbstractArray,
+    id::AbstractArray,
 )
     """Performs one step of the Minnapolis algorithm.
     Attempt to flip one spin
@@ -357,15 +357,15 @@ function get_index_vectors(Nx, Ny)
 
     ir = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
     il = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
+    iu = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
+    id = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
 
-    iu = Vector{Integer}(undef, Ny)
-    id = Vector{Integer}(undef, Ny)
     for index in CartesianIndices((1:Ny, 1:Nx))
         y,x = Tuple(index)
         ir[y, x] = (y, x+1, 1)
         il[y, x] = (y, x-1, 1)
-        iu[y] = y+1
-        id[y] = y-1
+        iu[y, x] = (y+1, x, 1)
+        id[y, x] = (y-1, x, 1)
     end
 
     return ir, il, iu, id
@@ -386,8 +386,8 @@ function get_pp_index_vectors(Nx, Ny)
         ir[y, Nx+2] = (y, Nx+2, 1)  # Rightmost column links to itself
         ir[y, Nx+1] = (y, 1, 1)     # Leftmost column
     end
-    iu[Ny] = 1
-    id[1] = Ny
+    iu[Ny, :] = [(1, x, 1) for x in 1:Nx]
+    id[1, :] = [(Ny, x, 1) for x in 1:Nx]
 
     return ir, il, iu, id
 end
@@ -398,8 +398,8 @@ function get_torus_index_vectors(Nx, Ny)
     # Connect the edges
     ir[:, Nx] = [(y, 1, 1) for y in 1:Ny]
     il[:, 1] = [(y, Nx, 1) for y in 1:Ny]
-    iu[Ny] = 1
-    id[1] = Ny
+    iu[Ny, :] = [(1, x, 1) for x in 1:Nx]
+    id[1, :] = [(Ny, x, 1) for x in 1:Nx]
     return ir, il, iu, id
 end
 
@@ -412,8 +412,8 @@ function get_klein_index_vectors(Nx, Ny)
         il[y, 1] = (Ny+1-y, Nx, -1)
     end
     # Connect the periodic BC in y
-    iu[Ny] = 1
-    id[1] = Ny
+    iu[Ny, :] = [(1, x, 1) for x in 1:Nx]
+    id[1, :] = [(Ny, x, 1) for x in 1:Nx]
     return ir, il, iu, id
 end
 
