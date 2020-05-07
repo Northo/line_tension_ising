@@ -38,6 +38,7 @@ options, rest = getopt.gnu_getopt(sys.argv[1:], 't:', [
     "data=",
     "Nmin=",
     "Nmax=",
+    "ylim=",
 ])
 
 
@@ -47,6 +48,7 @@ save = False
 N_min = -1
 N_max = -1
 filename = ""
+ylim = ""
 for opt, arg in options:
     if opt == "--title":
         title = arg
@@ -61,6 +63,9 @@ for opt, arg in options:
         N_min = int(arg)
     elif opt == "--Nmax":
         N_max = int(arg)
+    elif opt == "--ylim":
+        ylim = [float(i) for i in arg.split(",")]
+        plt.ylim(ylim)
 
 if not filename:
     print("Missing filename! ")
@@ -88,6 +93,7 @@ for system_name, system in systems:
 
 if title:
     plt.title(title)
+
 plt.legend()
 plt.xlabel("N")
 plt.ylabel("$N\\tau$")
