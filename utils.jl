@@ -390,8 +390,8 @@ function get_pp_index_vectors(Nx, Ny)
         ir[y, Nx+2] = (y, Nx+2, 1)  # Rightmost column links to itself
         ir[y, Nx+1] = (y, 1, 1)     # Leftmost column
     end
-    iu[Ny, :] = [(1, x, 1) for x in 1:Nx]
-    id[1, :] = [(Ny, x, 1) for x in 1:Nx]
+    iu[Ny, :] = [(1, x, 1) for x in 1:Nx+2]
+    id[1, :] = [(Ny, x, 1) for x in 1:Nx+2]
 
     return ir, il, iu, id
 end
