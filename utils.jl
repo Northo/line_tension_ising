@@ -342,11 +342,8 @@ function over_T_N(
     system,
     N_resamples,
 )
-    @assert length(T_N_pairs) == length(N_sweeps_array) == length(N_sweeps_eq_array) "All inputs must have same length."
-    for (i, pair) in enumerate(T_N_pairs)
+    for (pair, N_sweeps, N_sweeps_eq) in zip(T_N_pairs, N_sweeps_array, N_sweeps_eq_array)
         T, N = pair
-        N_sweeps = N_sweeps_array[i]
-        N_sweeps_eq = N_sweeps_eq_array[i]
 
         if system == :pp
             H = get_pp_hamiltonian(N, N)
@@ -362,6 +359,7 @@ function over_T_N(
 
         H_time, m = simulate!(H, N, N, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
 
+        print(".")  # Indicate simulate finished, only boot left
         N_tau, N_tau_std = bootstrap_tau(m[N_sweeps_eq:end], T, N_resamples)
         tau = N_tau / N
         tau_std = N_tau_std / N
