@@ -41,6 +41,19 @@ function get_pp_hamiltonian(Nx, Ny; T=:inf)
 end
 
 
+function get_torus_hamiltonian(Nx, Ny; T=:inf)
+    if T==:inf
+        H_pp = get_random_hamiltonian(Nx, Ny)
+    elseif T==:zero
+        H_pp = get_zero_T_hamiltonian(Nx, Ny)
+    else
+        throw(ArgumentError("T must be :inf or :zero, got $(repr(T))"))
+    end
+
+    return H_pp
+end
+
+
 function neighbor_interaction(H, i_y, i_x, ir, il, iu, id)
     neighbors = [c*H[idy, idx] for (idy, idx, c) in [
         ir[i_y, i_x],       # Right
@@ -169,18 +182,19 @@ end
 
 function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id; difference_function=pp_pn_difference)
     N = Nx*Ny
-    delta_H_pp = zeros(N_sweeps)
+    delta_H = zeros(N_sweeps)
+    H_0 = calculate_energy(H, ir, il, iu, id)
     m = zeros(N_sweeps)
     exponent_lookup = get_exponent_lookup(T)
 
     # Used per sweep, allocate now
-    delta_H_pp_sweep::Int = 0
+    delta_H_sweep::Int = 0
 
     for i in 1:N_sweeps
         m[i] = difference_function(H, Ny, Nx)
-        delta_H_pp[i] = sweep!(
+        delta_H[i] = sweep!(
             H,
-            delta_H_pp_sweep,
+            delta_H_sweep,
             N,
             T,
             exponent_lookup,
@@ -188,7 +202,8 @@ function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id; difference_function=p
         )
     end
 
-    return delta_H_pp, m
+    H_time = H_0 .+ cumsum(delta_H)
+    return H_time, m
 end
 
 
@@ -197,15 +212,10 @@ function compare_initial_H(Nx, Ny, T, N_sweeps)
     ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
     H_inf = get_pp_hamiltonian(Nx, Ny, T=:inf)
     H_zero = get_pp_hamiltonian(Nx, Ny, T=:zero)
-    H_0_inf = calculate_energy(H_inf, ir, il, iu, id)
-    H_0_zero = calculate_energy(H_zero, ir, il, iu, id)
 
     ## Simulate ##
-    delta_H_inf, m_inf = simulate!(H_inf, Nx, Ny, T, N_sweeps, ir, il, iu, id)
-    delta_H_zero, m_zero = simulate!(H_zero, Nx, Ny, T, N_sweeps, ir, il, iu, id)
-
-    H_inf_time = H_0_inf .+ cumsum(delta_H_inf)
-    H_zero_time = H_0_zero .+ cumsum(delta_H_zero)
+    H_inf_time, m_inf = simulate!(H_inf, Nx, Ny, T, N_sweeps, ir, il, iu, id)
+    H_zero_time, m_zero = simulate!(H_zero, Nx, Ny, T, N_sweeps, ir, il, iu, id)
 
     return H_inf_time, H_zero_time, m_inf, m_zero
 end
@@ -226,7 +236,6 @@ end
 function simulate_over_T!(
     T_range,
     H,
-    H_0_pp,
     Nx,
     Ny,
     N_sweeps,
@@ -243,8 +252,7 @@ function simulate_over_T!(
     end
 
     for (i, T) in enumerate(T_range)
-        delta_H_pp, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
-        H_pp_time = H_0_pp .+ cumsum(delta_H_pp)
+        H_time, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
 
         if bootstrap
             N_tau, N_tau_std = bootstrap_tau(m[N_sweep_eq:t_sample:end], T, N_resamples)
@@ -261,8 +269,6 @@ function simulate_over_T!(
         else
             println(" .tau: $tau, Ntau: $N_tau")
         end
-
-        H_0_pp = H_pp_time[end]
     end
 
     if bootstrap
@@ -305,10 +311,7 @@ function simulate_over_N(
             throw(ArgumentError("Invalid system"))
         end
 
-        H_0 = calculate_energy(H, ir, il, iu, id)
-
-        delta_H, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
-        H_time = H_0 .+ cumsum(delta_H)
+        H_time, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
         # Give feedback that simulation has finished and tau calculation begins
         print(".")
         if bootstrap

@@ -33,20 +33,16 @@ if system == :pp
     ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
     difference_function = pp_pn_difference
 elseif system == :torus
-    H = get_random_hamiltonian(Nx, Ny, T=:zero)
+    H = get_torus_hamiltonian(Nx, Ny, T=:zero)
     ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
     difference_function = torus_klein_difference
 else
     throw(ArgumentError("Invalid system"))
 end
 
-# Initial energies
-H_0 = calculate_energy(H, ir, il, iu, id)
-
 tau, tau_std = simulate_over_T!(
     T * Tc,
     H,
-    H_0,
     Nx,
     Ny,
     N_sweeps,
