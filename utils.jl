@@ -516,12 +516,14 @@ function write_T_N(
 
     # File format:
     # T N tau tau_std N_sweeps N_sweeps_eq t_sample system calculation_method N_resample
-    writedlm(filename, [
-        T, N, tau, tau_std,
-        N_sweeps, N_sweeps_eq, t_sample,
-        system,
-        calculation_method, N_resample,
-    ])
+    open(filename, "a") do file
+        writedlm(file, [
+            T, N, tau, tau_std,
+            N_sweeps, N_sweeps_eq, t_sample,
+            system,
+            calculation_method, N_resample,
+        ])
+    end
 end
 
 
