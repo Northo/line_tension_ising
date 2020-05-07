@@ -8,7 +8,7 @@ import getopt
 newparams = {'axes.labelsize': 15,
              'axes.linewidth': 1,
              'lines.linewidth': 1.5, 
-             'figure.figsize': (16, 8),
+             'figure.figsize': (9, 8),
              'ytick.labelsize': 15,
              'xtick.labelsize': 15,
              'ytick.major.pad': 5,
@@ -46,9 +46,10 @@ if not Ns:
 
 Ns = Ns.split(",")
 
+markers = ["D", "s"]
 for i, file in enumerate(files):
     T, tau, tau_std = np.loadtxt(file)
-    plt.errorbar(T, tau, yerr=tau_std, label=Ns[i])
+    plt.errorbar(T, tau, yerr=tau_std, label=f"N={Ns[i]}", fmt=markers[i])
 
 T = np.linspace(0, 1, 100)
 plt.plot(T, onsager(T), "--", label="Onsager")
@@ -58,6 +59,7 @@ if title:
 plt.xlabel("$T/T_c$")
 plt.ylabel("$\\tau$")
 plt.axhline(y=0, linestyle="dashed", color="gray", linewidth=0.2)
+
 plt.axvline(x=1, linestyle="dashed", color="gray", linewidth=0.2)
 plt.legend()
 if save:
