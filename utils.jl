@@ -12,6 +12,17 @@ using DelimitedFiles
 # Global constants
 Tc = 2.26919 # Tc = 2.269 from analytical
 
+struct System
+    H::Array{Integer, 2}
+    ir::Array{Tuple{Integer, Integer, Integer}, 2}
+    il::Array{Tuple{Integer, Integer, Integer}, 2}
+    iu::Array{Tuple{Integer, Integer, Integer}, 2}
+    id::Array{Tuple{Integer, Integer, Integer}, 2}
+    Nx::Int
+    Ny::Int
+    N::Int
+    difference_function
+end
 
 function get_random_hamiltonian(Nx::Int, Ny::Int)
     H = rand([1, -1], (Ny, Nx))
@@ -41,12 +52,40 @@ function get_pp_hamiltonian(Nx, Ny; T=:inf)
 end
 
 
-function neighbor_interaction(H, i_y, i_x, ir, il, iu, id)
-    neighbors = [c*H[idy, idx] for (idy, idx, c) in [
-        ir[i_y, i_x],       # Right
-        il[i_y, i_x],       # Left
-        iu[i_y, i_x],       # Up
-        id[i_y, i_x],       # Down
+function get_pp_system(Nx, Ny)
+    H = get_pp_hamiltonian(Nx, Ny, T=:zero)
+    ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
+    difference_function = pp_pn_difference
+
+    return System(
+        H,
+        ir, il, iu, id,
+        Nx, Ny, Nx*Ny,
+        difference_function
+    )
+end
+
+
+function get_torus_system(Nx, Ny)
+    H = get_zero_T_hamiltonian(Nx, Ny)
+    ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
+    difference_function = torus_klein_difference
+
+    return System(
+        H,
+        ir, il, iu, id,
+        Nx, Ny, Nx*Ny,
+        difference_function
+    )
+end
+
+
+function neighbor_interaction(system, i_y, i_x)
+    neighbors = [c*system.H[idy, idx] for (idy, idx, c) in [
+        system.ir[i_y, i_x],       # Right
+        system.il[i_y, i_x],       # Left
+        system.iu[i_y, i_x],       # Up
+        system.id[i_y, i_x],       # Down
     ]]
     return neighbors
 end
@@ -84,14 +123,9 @@ end
 
 
 function step!(
-    H::AbstractArray,
-    N::Int,
+    system::System,
     T,
     exponent_lookup::AbstractVector,
-    ir::AbstractArray,
-    il::AbstractArray,
-    iu::AbstractArray,
-    id::AbstractArray,
 )
     """Performs one step of the Minnapolis algorithm.
     Attempt to flip one spin
@@ -112,12 +146,12 @@ function step!(
     # Thus, so long as these "extra" columns, that make H bigger,
     # are only at the edge, Nx+1, Nx+2 ..., this will work.
     # Ny, must however be the correct size in H.
-    s_i = rand(1:N)  # Spin to flip
-    s_i_cartesian = CartesianIndices(H)[s_i]
+    s_i = rand(1:system.N)  # Spin to flip
+    s_i_cartesian = CartesianIndices(system.H)[s_i]
     s_i_y, s_i_x = Tuple(s_i_cartesian)
 
-    neighbors = neighbor_interaction(H, s_i_y, s_i_x, ir, il, iu, id)
-    spin = H[s_i]
+    neighbors = neighbor_interaction(system, s_i_y, s_i_x)
+    spin = system.H[s_i]
     neighbor_sum = sum(neighbors)
 
     # Delta_H can only take certain values
@@ -143,7 +177,7 @@ function step!(
     end
 
     if accept == true
-        H[s_i] = -spin
+        system.H[s_i] = -spin
         return delta_H_fourth
     else
         return 0
@@ -152,23 +186,20 @@ end
 
 
 function sweep!(
-    H,
+    system,
     delta_H_pp,
-    N,
     T,
     exponent_lookup,
-    ir, il, iu, id
 )
-    for i in 1:N
-        delta_H_pp += step!(H, N, T, exponent_lookup, ir, il, iu, id)
+    for i in 1:system.N
+        delta_H_pp += step!(system, T, exponent_lookup)
     end
     return delta_H_pp*4  # Multiply by 4, because result from step is /4
 end
 
 
 
-function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id; difference_function=pp_pn_difference)
-    N = Nx*Ny
+function simulate!(system, T, N_sweeps)
     delta_H_pp = zeros(N_sweeps)
     m = zeros(N_sweeps)
     exponent_lookup = get_exponent_lookup(T)
@@ -177,14 +208,12 @@ function simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id; difference_function=p
     delta_H_pp_sweep::Int = 0
 
     for i in 1:N_sweeps
-        m[i] = difference_function(H, Ny, Nx)
+        m[i] = system.difference_function(system.H, system.Ny, system.Nx)
         delta_H_pp[i] = sweep!(
-            H,
+            system,
             delta_H_pp_sweep,
-            N,
             T,
             exponent_lookup,
-            ir, il, iu, id,
         )
     end
 
@@ -386,8 +415,8 @@ function get_pp_index_vectors(Nx, Ny)
         ir[y, Nx+2] = (y, Nx+2, 1)  # Rightmost column links to itself
         ir[y, Nx+1] = (y, 1, 1)     # Leftmost column
     end
-    iu[Ny, :] = [(1, x, 1) for x in 1:Nx]
-    id[1, :] = [(Ny, x, 1) for x in 1:Nx]
+    iu[Ny, :] = [(1, x, 1) for x in 1:Nx+2]
+    id[1, :] = [(Ny, x, 1) for x in 1:Nx+2]
 
     return ir, il, iu, id
 end
