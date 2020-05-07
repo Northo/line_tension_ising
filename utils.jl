@@ -488,20 +488,15 @@ function bootstrap_tau(H_diff, T, N_resamples)
      E<tau>, std(tau)
     """
     n = length(H_diff)
-    taus = Vector(undef, N_resamples)
     party_ratio = exp.(-H_diff/T)
-    for i in 1:N_resamples
-        # Resample, with duplicates
-        party_ratio_sample = party_ratio[rand(1:n, n)]
-        party_ratio_mean = mean(party_ratio_sample)
-        tau = -T * log(party_ratio_mean)
-        # Calculate using resample
-        taus[i] = tau
-    end
-    mean_tau = mean(taus)
-    std_tau = std(taus)
+    party_ratio_samples = party_ratio[rand(1:n, (N_resamples, n))]
+    party_ratio_mean = mean(party_ratio_samples, dims=2)
+    log_of_mean = log.(party_ratio_mean)
 
-    return mean_tau, std_tau
+    tau = -T * mean(log_of_mean)
+    tau_std = T * std(log_of_mean)
+
+    return tau, tau_std
 end
 
 
