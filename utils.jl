@@ -309,7 +309,8 @@ function simulate_over_N(
 
         delta_H, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
         H_time = H_0 .+ cumsum(delta_H)
-
+        # Give feedback that simulation has finished and tau calculation begins
+        print(".")
         if bootstrap
             N_tau, N_tau_std = bootstrap_tau(m[N_sweeps_eq:t_sample:end], T, N_resamples)
             N_tau_std_list[i] = N_tau_std
@@ -344,7 +345,7 @@ function calculate_tau(diff, T, t_eq=1; t_sample=1)
     party_ratio = exp.(-diff[t_eq:t_sample:end]/T)
     # Find expectation value
     party_ratio_mean = mean(party_ratio)
-    tau = -T * log.(party_ratio_mean)
+    tau = -T * log(party_ratio_mean)
     return tau
 end
 
@@ -441,11 +442,14 @@ function bootstrap_tau(H_diff, T, N_resamples)
     """
     n = length(H_diff)
     taus = Vector(undef, N_resamples)
+    party_ratio = exp.(-H_diff/T)
     for i in 1:N_resamples
         # Resample, with duplicates
-        random_sample = H_diff[rand(1:n, n)]
+        party_ratio_sample = party_ratio[rand(1:n, n)]
+        party_ratio_mean = mean(party_ratio)
+        tau = -T * log(party_ratio_mean)
         # Calculate using resample
-        taus[i] = calculate_tau(random_sample, T)
+        taus[i] = tau
     end
     mean_tau = mean(taus)
     std_tau = std(taus)
