@@ -368,6 +368,7 @@ function over_T_N(
 
         print(".")  # Indicate simulate finished, only boot left
         N_tau, N_tau_std = bootstrap_tau(m[N_sweeps_eq:end], T, N_resamples)
+        print(".")
         tau = N_tau / N
         tau_std = N_tau_std / N
 
