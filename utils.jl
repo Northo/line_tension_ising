@@ -494,7 +494,31 @@ function read_tau_X(filename, tau_std=false)
         tau = data[2, :]
         return X, tau
     end
+end
 
+
+function write_T_N(
+    T,
+    N,
+    tau,
+    tau_std;
+    N_sweeps,
+    N_sweeps_eq,
+    t_sample,
+    N_resample,  # If appliccable
+    system,
+    calculation_method,
+)
+    filename = "datadir/T_N_new.dat"
+
+    # File format:
+    # T N tau tau_std N_sweeps N_sweeps_eq t_sample system calculation_method N_resample
+    writedlm(filename, [
+        T, N, tau, tau_std,
+        N_sweeps, N_sweeps_eq, t_sample,
+        system,
+        calculation_method, N_resample,
+    ])
 end
 
 
