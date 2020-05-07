@@ -335,6 +335,50 @@ function simulate_over_N(
 end
 
 
+function over_T_N(
+    T_N_pairs,
+    N_sweeps_array,
+    N_sweeps_eq_array,
+    system,
+    N_resamples,
+)
+    @assert length(T_N_pairs) == length(N_sweeps_array) == length(N_sweeps_eq_array) "All inputs must have same length."
+    for (i, pair) in enumerate(T_N_pairs)
+        T, N = pair
+        N_sweeps = N_sweeps_array[i]
+        N_sweeps_eq = N_sweeps_eq_array[i]
+
+        if system == :pp
+            H = get_pp_hamiltonian(N, N)
+            ir, il, iu, id = get_pp_index_vectors(N, N)
+            difference_function = pp_pn_difference
+        elseif system == :torus
+            H = get_random_hamiltonian(N, N)
+            ir, il, iu, id = get_torus_index_vectors(N, N)
+            difference_function = torus_klein_difference
+        else
+            throw(ArgumentError("Invalid system"))
+        end
+
+        H_time, m = simulate!(H, N, N, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
+
+        N_tau, N_tau_std = bootstrap_tau(m[N_sweeps_eq:end], T, N_resamples)
+        tau = N_tau / N
+        tau_std = N_tau_std / N
+
+        write_T_N(
+            T, N, tau, tau_std,
+            N_sweeps=N_sweeps, N_sweeps_eq=N_sweeps_eq,
+            t_sample=1,
+            N_resamples=N_resamples,
+            system=string(system),
+            calculation_method="bootstrap",
+        )
+        println("Wrote T=$T, N=$N")
+    end
+end
+
+
 function benchmark(N_sweeps, T, Nx, Ny)
     ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
     H = get_pp_hamiltonian(Nx, Ny)
@@ -449,7 +493,7 @@ function bootstrap_tau(H_diff, T, N_resamples)
     for i in 1:N_resamples
         # Resample, with duplicates
         party_ratio_sample = party_ratio[rand(1:n, n)]
-        party_ratio_mean = mean(party_ratio)
+        party_ratio_mean = mean(party_ratio_sample)
         tau = -T * log(party_ratio_mean)
         # Calculate using resample
         taus[i] = tau
@@ -508,21 +552,21 @@ function write_T_N(
     N_sweeps,
     N_sweeps_eq,
     t_sample,
-    N_resample,  # If appliccable
+    N_resamples,  # If appliccable
     system,
     calculation_method,
 )
     filename = "datadir/T_N_new.dat"
 
     # File format:
-    # T N tau tau_std N_sweeps N_sweeps_eq t_sample system calculation_method N_resample
+    # T N tau tau_std N_sweeps N_sweeps_eq t_sample system calculation_method N_resamples
     open(filename, "a") do file
-        writedlm(file, [
+        write(file, join([
             T, N, tau, tau_std,
             N_sweeps, N_sweeps_eq, t_sample,
             system,
-            calculation_method, N_resample,
-        ])
+            calculation_method, N_resamples,
+        ], "\t"), "\n")
     end
 end
 
