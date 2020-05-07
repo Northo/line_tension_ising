@@ -56,12 +56,19 @@ end
 
 function neighbor_interaction(H, i_y, i_x, ir, il, iu, id)
     return [
-        H[ir[i_y, i_x]...],
-        H[il[i_y, i_x]...],
-        H[iu[i_y, i_x]...],
-        H[id[i_y, i_x]...],
+        H[i_y, ir[i_x]],
+        H[i_y, il[i_x]],
+        H[iu[i_y], i_x],
+        H[id[i_y], i_x],
     ]
-    return neighbors
+end
+
+
+function neighbor_interaction_sum(H, i_y, i_x, ir, il, iu, id)
+    return H[i_y, ir[i_x]] +
+        H[i_y, il[i_x]] +
+        H[iu[i_y], i_x] +
+        H[id[i_y], i_x]
 end
 
 
@@ -101,10 +108,10 @@ function step!(
     N::Int,
     T,
     exponent_lookup::AbstractVector,
-    ir::AbstractArray,
-    il::AbstractArray,
-    iu::AbstractArray,
-    id::AbstractArray,
+    ir::AbstractVector,
+    il::AbstractVector,
+    iu::AbstractVector,
+    id::AbstractVector,
 )
     """Performs one step of the Minnapolis algorithm.
     Attempt to flip one spin
@@ -125,18 +132,12 @@ function step!(
     # Thus, so long as these "extra" columns, that make H bigger,
     # are only at the edge, Nx+1, Nx+2 ..., this will work.
     # Ny, must however be the correct size in H.
-    s_i = rand(1:N)  # Spin to flip
+    s_i = rand(1:N)
     s_i_cartesian = CartesianIndices(H)[s_i]
-    s_i_y, s_i_x = Tuple(s_i_cartesian)
+    s_i_y, s_i_x = s_i_cartesian[1], s_i_cartesian[2]
 
-
-#    neighbors = neighbor_interaction(H, s_i_y, s_i_x, ir, il, iu, id)
+    neighbor_sum = neighbor_interaction_sum(H, s_i_y, s_i_x, ir, il, iu, id)
     spin = H[s_i]
-    #    neighbor_sum = sum(neighbors)
-    neighbor_sum = H[ir[s_i_y, s_i_x]...] +
-        H[il[s_i_y, s_i_x]...] +
-        H[iu[s_i_y, s_i_x]...] +
-        H[id[s_i_y, s_i_x]...]
 
     # Delta_H can only take certain values
     # They are -8 -4 0 4 8.
@@ -408,17 +409,17 @@ function get_index_vectors(Nx, Ny)
     conditions such as periodic boundaries
     must be added"""
 
-    ir = Array{Tuple{Integer, Integer}, 2}(undef, Ny, Nx)
-    il = Array{Tuple{Integer, Integer}, 2}(undef, Ny, Nx)
-    iu = Array{Tuple{Integer, Integer}, 2}(undef, Ny, Nx)
-    id = Array{Tuple{Integer, Integer}, 2}(undef, Ny, Nx)
+    ir = Vector{Integer}(undef, Nx)
+    il = Vector{Integer}(undef, Nx)
+    iu = Vector{Integer}(undef, Ny)
+    id = Vector{Integer}(undef, Ny)
 
     for index in CartesianIndices((1:Ny, 1:Nx))
         y,x = Tuple(index)
-        ir[y, x] = (y, x+1)
-        il[y, x] = (y, x-1)
-        iu[y, x] = (y+1, x)
-        id[y, x] = (y-1, x)
+        ir[x] = x+1
+        il[x] = x-1
+        iu[y] = y+1
+        id[y] = y-1
     end
 
     return ir, il, iu, id
@@ -431,16 +432,14 @@ function get_pp_index_vectors(Nx, Ny)
     """
 
     ir, il, iu, id = get_index_vectors(Nx+2, Ny)
-    for y in 1:Ny
-        il[y, 1] = (y, Nx+1)     # Positive column
-        il[y, Nx+1] = (y, Nx+1)  # Leftmost column links to itself
-        il[y, Nx+2] = (y, Nx)    # Rightmost column
-        ir[y, Nx] = (y, Nx+2)    # Positive/negative column
-        ir[y, Nx+2] = (y, Nx+2)  # Rightmost column links to itself
-        ir[y, Nx+1] = (y, 1)     # Leftmost column
-    end
-    iu[Ny, :] = [(1, x) for x in 1:Nx+2]
-    id[1, :] = [(Ny, x) for x in 1:Nx+2]
+    il[1] = Nx+1     # Positive column
+    il[Nx+1] = Nx+1  # Leftmost column links to itself
+    il[Nx+2] = Nx    # Rightmost column
+    ir[Nx] = Nx+2    # Positive/negative column
+    ir[Nx+2] = Nx+2  # Rightmost column links to itself
+    ir[Nx+1] = 1     # Leftmost column
+    iu[Ny] = 1
+    id[1] = Ny
 
     return ir, il, iu, id
 end
@@ -449,10 +448,10 @@ end
 function get_torus_index_vectors(Nx, Ny)
     ir, il, iu, id = get_index_vectors(Nx, Ny)
     # Connect the edges
-    ir[:, Nx] = [(y, 1) for y in 1:Ny]
-    il[:, 1] = [(y, Nx) for y in 1:Ny]
-    iu[Ny, :] = [(1, x) for x in 1:Nx]
-    id[1, :] = [(Ny, x) for x in 1:Nx]
+    ir[Nx] = 1
+    il[1] = Nx
+    iu[Ny] = 1
+    id[1] = Ny
     return ir, il, iu, id
 end
 
