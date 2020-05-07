@@ -55,12 +55,12 @@ end
 
 
 function neighbor_interaction(H, i_y, i_x, ir, il, iu, id)
-    neighbors = [c*H[idy, idx] for (idy, idx, c) in [
-        ir[i_y, i_x],       # Right
-        il[i_y, i_x],       # Left
-        iu[i_y, i_x],       # Up
-        id[i_y, i_x],       # Down
-    ]]
+    return [
+        H[ir[i_y, i_x]...],
+        H[il[i_y, i_x]...],
+        H[iu[i_y, i_x]...],
+        H[id[i_y, i_x]...],
+    ]
     return neighbors
 end
 
@@ -129,9 +129,14 @@ function step!(
     s_i_cartesian = CartesianIndices(H)[s_i]
     s_i_y, s_i_x = Tuple(s_i_cartesian)
 
-    neighbors = neighbor_interaction(H, s_i_y, s_i_x, ir, il, iu, id)
+
+#    neighbors = neighbor_interaction(H, s_i_y, s_i_x, ir, il, iu, id)
     spin = H[s_i]
-    neighbor_sum = sum(neighbors)
+    #    neighbor_sum = sum(neighbors)
+    neighbor_sum = H[ir[s_i_y, s_i_x]...] +
+        H[il[s_i_y, s_i_x]...] +
+        H[iu[s_i_y, s_i_x]...] +
+        H[id[s_i_y, s_i_x]...]
 
     # Delta_H can only take certain values
     # They are -8 -4 0 4 8.
@@ -403,17 +408,17 @@ function get_index_vectors(Nx, Ny)
     conditions such as periodic boundaries
     must be added"""
 
-    ir = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
-    il = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
-    iu = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
-    id = Array{Tuple{Integer, Integer, Integer}, 2}(undef, Ny, Nx)
+    ir = Array{Tuple{Integer, Integer}, 2}(undef, Ny, Nx)
+    il = Array{Tuple{Integer, Integer}, 2}(undef, Ny, Nx)
+    iu = Array{Tuple{Integer, Integer}, 2}(undef, Ny, Nx)
+    id = Array{Tuple{Integer, Integer}, 2}(undef, Ny, Nx)
 
     for index in CartesianIndices((1:Ny, 1:Nx))
         y,x = Tuple(index)
-        ir[y, x] = (y, x+1, 1)
-        il[y, x] = (y, x-1, 1)
-        iu[y, x] = (y+1, x, 1)
-        id[y, x] = (y-1, x, 1)
+        ir[y, x] = (y, x+1)
+        il[y, x] = (y, x-1)
+        iu[y, x] = (y+1, x)
+        id[y, x] = (y-1, x)
     end
 
     return ir, il, iu, id
@@ -427,15 +432,15 @@ function get_pp_index_vectors(Nx, Ny)
 
     ir, il, iu, id = get_index_vectors(Nx+2, Ny)
     for y in 1:Ny
-        il[y, 1] = (y, Nx+1, 1)     # Positive column
-        il[y, Nx+1] = (y, Nx+1, 1)  # Leftmost column links to itself
-        il[y, Nx+2] = (y, Nx, 1)    # Rightmost column
-        ir[y, Nx] = (y, Nx+2, 1)    # Positive/negative column
-        ir[y, Nx+2] = (y, Nx+2, 1)  # Rightmost column links to itself
-        ir[y, Nx+1] = (y, 1, 1)     # Leftmost column
+        il[y, 1] = (y, Nx+1)     # Positive column
+        il[y, Nx+1] = (y, Nx+1)  # Leftmost column links to itself
+        il[y, Nx+2] = (y, Nx)    # Rightmost column
+        ir[y, Nx] = (y, Nx+2)    # Positive/negative column
+        ir[y, Nx+2] = (y, Nx+2)  # Rightmost column links to itself
+        ir[y, Nx+1] = (y, 1)     # Leftmost column
     end
-    iu[Ny, :] = [(1, x, 1) for x in 1:Nx+2]
-    id[1, :] = [(Ny, x, 1) for x in 1:Nx+2]
+    iu[Ny, :] = [(1, x) for x in 1:Nx+2]
+    id[1, :] = [(Ny, x) for x in 1:Nx+2]
 
     return ir, il, iu, id
 end
@@ -444,10 +449,10 @@ end
 function get_torus_index_vectors(Nx, Ny)
     ir, il, iu, id = get_index_vectors(Nx, Ny)
     # Connect the edges
-    ir[:, Nx] = [(y, 1, 1) for y in 1:Ny]
-    il[:, 1] = [(y, Nx, 1) for y in 1:Ny]
-    iu[Ny, :] = [(1, x, 1) for x in 1:Nx]
-    id[1, :] = [(Ny, x, 1) for x in 1:Nx]
+    ir[:, Nx] = [(y, 1) for y in 1:Ny]
+    il[:, 1] = [(y, Nx) for y in 1:Ny]
+    iu[Ny, :] = [(1, x) for x in 1:Nx]
+    id[1, :] = [(Ny, x) for x in 1:Nx]
     return ir, il, iu, id
 end
 
@@ -456,12 +461,12 @@ function get_klein_index_vectors(Nx, Ny)
     ir, il, iu, id = get_index_vectors(Nx, Ny)
     # Connect the Mobius band
     for y in 1:Ny
-        ir[y, Nx] = (Ny+1-y, 1, -1)
-        il[y, 1] = (Ny+1-y, Nx, -1)
+        ir[y, Nx] = (Ny+1-y, 1)
+        il[y, 1] = (Ny+1-y, Nx)
     end
     # Connect the periodic BC in y
-    iu[Ny, :] = [(1, x, 1) for x in 1:Nx]
-    id[1, :] = [(Ny, x, 1) for x in 1:Nx]
+    iu[Ny, :] = [(1, x) for x in 1:Nx]
+    id[1, :] = [(Ny, x) for x in 1:Nx]
     return ir, il, iu, id
 end
 
