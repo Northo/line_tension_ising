@@ -340,7 +340,8 @@ function over_T_N(
     N_sweeps_array,
     N_sweeps_eq_array,
     system,
-    N_resamples,
+    N_resamples;
+    datafile
 )
     for (pair, N_sweeps, N_sweeps_eq) in zip(T_N_pairs, N_sweeps_array, N_sweeps_eq_array)
         T, N = pair
@@ -371,6 +372,7 @@ function over_T_N(
             N_resamples=N_resamples,
             system=string(system),
             calculation_method="bootstrap",
+            filename=datafile,
         )
         println("Wrote T=$T, N=$N")
     end
@@ -548,9 +550,8 @@ function write_T_N(
     N_resamples,  # If appliccable
     system,
     calculation_method,
+    filename = "datadir/T_N_new.dat",
 )
-    filename = "datadir/T_N_new.dat"
-
     # File format:
     # T N tau tau_std N_sweeps N_sweeps_eq t_sample system calculation_method N_resamples
     open(filename, "a") do file
