@@ -1,7 +1,6 @@
-"""Plots tau vs. T for various N"""
-
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas
 import sys
 import getopt
 
@@ -23,45 +22,51 @@ plt.rcParams.update(newparams)
 
 Tc = 2.26919  # Onsager's critical temp
 
+
 def onsager(T):
     return 2 - T*Tc*np.log(1/np.tanh(1/(T*Tc)))
 
-options, files = getopt.gnu_getopt(sys.argv[1:], 'N:t:', ["title=", "save="])
 
-print('\n'.join(files))
+options, rest = getopt.gnu_getopt(sys.argv[1:], 't:', [
+    "title=",
+    "save=",
+    "logy",
+    "data=",
+    "Nmin=",
+    "Nmax=",
+])
 
-Ns = []
+
 title = ""
+ts = ""
 save = False
+N_min = -1
+N_max = -1
 for opt, arg in options:
-    if opt == "-N":
-        Ns = arg
-    elif opt in ("-t", "--title"):
+    if opt == "--title":
         title = arg
     elif opt in ("--save"):
         save = True
         figname = arg
-if not Ns:
-    Ns = input("Comma spearated list of N: ")
+    elif opt == "--logy":
+        plt.yscale("log")
+    elif opt == "-t":
+        ts = arg
+    elif opt == "--data":
+        filename = arg
+    elif opt == "--Nmin":
+        N_min = int(arg)
+    elif opt == "--Nmax":
+        N_max = int(arg)
 
-Ns = Ns.split(",")
 
-markers = ["D", "s", "^", "v", "o"]
-for i, file in enumerate(files):
-    T, tau, tau_std = np.loadtxt(file)
-    plt.errorbar(T, tau, yerr=tau_std, label=f"N={Ns[i]}", fmt=markers[i])
+df = pandas.read_csv(filename, delimiter="\t")
+# Remove values over critica
 
-T = np.linspace(0, 1, 100)
-plt.plot(T, onsager(T), "--", label="Onsager")
+if N_min != -1:
+    df = df[df["N_sweeps"] >= N_min]
+if N_max != -1:
+    df = df[df["N_sweeps"] <= N_max]
 
-if title:
-    plt.title(title)
-plt.xlabel("$T/T_c$")
-plt.ylabel("$\\tau$")
-plt.axhline(y=0, linestyle="dashed", color="gray", linewidth=0.2)
-
-plt.axvline(x=1, linestyle="dashed", color="gray", linewidth=0.2)
-plt.legend()
-if save:
-    plt.savefig(figname)
-plt.show()
+plt.errorbar(df["N"], df["tau"], yerr=df["tau_std"])
+plt.

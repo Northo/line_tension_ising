@@ -42,6 +42,7 @@ try:
     file
 except NameError as e:
     print("File not defined!")
+    print("Usage: [(-t|--title)=<title>]  [(-f|--file)=<file>] [--log] [--save=<figfile>]")
     exit()
 
 N, tau, tau_std = np.loadtxt(file)

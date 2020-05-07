@@ -23,7 +23,7 @@ newparams = {'axes.labelsize': 15,
 plt.rcParams.update(newparams)
 
 Tc = 2.26919  # Onsager's critical temp
-filename = "datadir/T_N_new.dat"
+filename = "datadir/T_N_fresh_run.dat"
 
 def onsager(T):
     return 2 - T*Tc*np.log(1/np.tanh(1/(T*Tc)))
@@ -31,12 +31,21 @@ def onsager(T):
 def t(T):
     return 1 - T/Tc
 
-options, rest = getopt.gnu_getopt(sys.argv[1:], 't:', ["title=", "save=", "logy"])
+options, rest = getopt.gnu_getopt(sys.argv[1:], 't:', [
+    "title=",
+    "save=",
+    "logy",
+    "data=",
+    "Nmin=",
+    "Nmax=",
+])
 
 
 title = ""
 ts = ""
 save = False
+N_min = -1
+N_max = -1
 for opt, arg in options:
     if opt == "--title":
         title = arg
@@ -47,22 +56,33 @@ for opt, arg in options:
         plt.yscale("log")
     elif opt == "-t":
         ts = arg
+    elif opt == "--data":
+        filename = arg
+    elif opt == "--Nmin":
+        N_min = int(arg)
+    elif opt == "--Nmax":
+        N_max = int(arg)
 
-markers = ["D", "s"]
 
 df = pandas.read_csv(filename, delimiter="\t")
 df["t"] = t(df["T"])
 # Remove values over critica
 df = df[df["t"]>0]
 
+if N_min != -1:
+    df = df[df["N_sweeps"] >= N_min]
+if N_max != -1:
+    df = df[df["N_sweeps"] <= N_max]
+
 def plot(df, marker="s", label=""):
     y = df["tau"]/df["t"]
-    x = 1/(df["N"]*df["t"])
-    plt.scatter(x, y, marker=marker, label=label)
+    yerr = df["tau_std"]/df["t"]
+    x = (df["N"]*df["t"])
+    plt.errorbar(x, y, yerr=yerr, label=label, fmt=marker)
 
 # If given ts, group
 i = 0  # For markers
-markers = ["o", "v", "s", "^", "x", "+", "<", ">"]
+markers = ["D", "o", "v", "s", "^", "x", "+", "<", ">"]
 if ts:
     ts = ts.split(",")
     ts = [float(t) for t in ts]
