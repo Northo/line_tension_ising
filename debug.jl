@@ -4,7 +4,7 @@ include("utils.jl")
 # Setup #
 #########
 N_sweeps = 100000
-Nx, Ny = 20, 20
+Nx, Ny = 30, 30
 T = 1
 
 #system = :pp

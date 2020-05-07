@@ -3,8 +3,8 @@ include("utils.jl")
 #########
 # Setup #
 #########
-N_sweeps = 500000
-N_sweeps_eq = 5000
+N_sweeps = 2000000
+N_sweeps_eq = 4000
 N_sample = 3
 N_resamples = 700  # Bootstrap
 T = Tc

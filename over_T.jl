@@ -3,16 +3,17 @@ include("utils.jl")
 #########
 # Setup #
 #########
-N_sweeps = 100000
-N_sweeps_eq = 1000
+N_sweeps = 200000
+N_sweeps_eq = 6000
 N_sample = 3
-N_resamples = 700 
-Nx, Ny = 20, 20
-T = collect(0.85:0.02:1.05) 
+N_resamples = 700
+Nx, Ny = 30, 30
+#T = collect(0.85:0.02:1.05) 
 #T = vcat(0.2:0.2:0.8, 0.9:0.05:1.1, 1.2:0.1:1.4)  # Fraction of Tc
+T = vcat(0.2:0.2:1, 1.05:0.05:1.15)
 
-#system = :pp
-system = :torus
+system = :pp
+#system = :torus
 
 plot = true
 write_to_file = true
@@ -39,7 +40,6 @@ elseif system == :torus
 else
     throw(ArgumentError("Invalid system"))
 end
-
 tau, tau_std = simulate_over_T!(
     T * Tc,
     H,
