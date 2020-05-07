@@ -166,16 +166,16 @@ end
 
 function sweep!(
     H,
-    delta_H_pp,
+    delta_H,
     N,
     T,
     exponent_lookup,
     ir, il, iu, id
 )
     for i in 1:N
-        delta_H_pp += step!(H, N, T, exponent_lookup, ir, il, iu, id)
+        delta_H += step!(H, N, T, exponent_lookup, ir, il, iu, id)
     end
-    return delta_H_pp*4  # Multiply by 4, because result from step is /4
+    return delta_H*4  # Multiply by 4, because result from step is /4
 end
 
 
