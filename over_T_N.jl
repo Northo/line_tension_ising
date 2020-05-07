@@ -3,6 +3,8 @@ include("utils.jl")
 #########
 # Setup #
 #########
+datafile = "datadir/T_N_fresh_run.dat"
+
 N_sample = 3
 N_resamples = 700
 #system = :pp
@@ -39,4 +41,5 @@ over_T_N(
     N_sweeps_eq,
     system,
     N_resamples,
+    datafile=datafile,
 )
