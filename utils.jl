@@ -501,7 +501,7 @@ function bootstrap_tau(H_diff, T, N_resamples)
     taus = Vector(undef, N_resamples)
     tau_stds = Vector(undef, N_resamples)
     for i in 1:N_resamples
-        party_ratio_sample = party_ratio[rand(1:n)]
+        party_ratio_sample = party_ratio[rand(1:n, n)]
         party_ratio_mean = mean(party_ratio_sample)
         taus[i] = party_ratio_mean
     end
