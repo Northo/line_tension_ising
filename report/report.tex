@@ -106,6 +106,17 @@ The right column has no neighbor on the right, it is not a part of the system!
 Here, the solution is again the index vectors, because the index vector right at positon $N_{x+1}$ is $N_{x+1}$!
 This simply lead to a constant addition in the energy, which we of course are allowed to do.
 
+
+Measurements are not always trivial for Monte Carlo simulations.
+There are mainly two aspects of interest, the equilibration time and correlation time.
+When startig the simulatoin, it must be run for some period of time before the system has reached equilibrium.
+Before this point, it makes no sense to take samples for calculating expectation value.
+Also, after a measurement, one should wait some period of time before making a new measurement, to ensure that the two states are not correlated.
+
+
+
+- Bootstrap and measurements
+
 Interesting solutions:
 - Indexes for neighbor points
 - Very modul based code.
@@ -121,7 +132,12 @@ Interesting solutions:
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=.75\textwidth]{media/tau_T}
+  \subcaptionbox{Torus}{
+    \includegraphics[width=.47\textwidth]{media/tau_T_torus}
+  }
+  \subcaptionbox{PP}{
+    \includegraphics[width=.47\textwidth]{media/tau_T_torus}
+  }
   \caption{$\tau$ as a function of T.\label{fig:tau_T}}
 \end{figure}
 
