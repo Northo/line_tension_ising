@@ -61,7 +61,7 @@ The simulation is written in Julia and the plots are generated in Python.
 As the Python code is just simple plotting, I will not give it much focus here.
 The code is separated into files, the main part being in \verb|utils.jl|.
 Nothing should be run directly from \verb|utils.jl|, it contains the machinery that can be used from other designated scripts.
-For each type of ``operation'' that we want to execute, there should exist a file, that extends \verb|utils.jl|, for example \verb|task1.jl| and \verb|investigate_error.jl|.
+For each type of ``operation'' that we want to execute, there should exist a file, that extends \verb|utils.jl|, for example \verb|over_T_N.jl| and \verb|debug.jl|.
 
 Firstly, a \emph{very} brief explanation of the Metropolis method.
 Given a 2D Ising lattice, select at random one lattice site.
@@ -100,7 +100,7 @@ As for the energy calculation one has several options.
 The naive implementation would calculate the energy of the entire spin matrix for each measurement.
 However, a better approach is to measure only the initial energy, and then cumulatively add the energy change from each flip.
 In our problem, the energy is not really needed, except for debugging and determining when the system reaches equilibrium.
-The only quantity of importance, is the difference in energy between the two systems that the Mon-Jasnow algorithm considers -- fixes positive and negative sides for original Mon-Jasnow, and torus and Klein flask for the extended algorithm.
+The only quantity of importance, is the difference in energy between the two systems that the Mon-Jasnow algorithm considers -- fixed positive and negative sides for original Mon-Jasnow, and torus and Klein flask for the extended algorithm.
 These energy differences have simple formulas: two time the magnetization of the rightmost column for the original, as stated in \cite{mon_jasnow}, and for the extended I found the expression
 \begin{equation}
   \sum_y S_{1,y} [ S_{N_x, y} + S_{N_x, N_y+1-y} ],
@@ -110,7 +110,7 @@ As Julia is column oriented in its arrays, this ends up being very efficient to 
 
 Now to the more programmatic aspects of my solution.
 There are some solutions in particular that I would like to emphasize.
-Here I will not discuss the performance in detail, for that see \ref{sec:performance}.
+Here I will not discuss the performance in detail, for that see section \ref{sec:performance}.
 Firstly, the code is written in a very module based manner.
 This makes it easy to change, both cosmetic changes to code and alterations to how one calculates or represents data.
 This gives a very general code, for which I am proud.
@@ -122,8 +122,8 @@ When calculating neighbor interaction one has to know what the neighbors are.
 Most implementations would probably, even though there are other possibilities, store the spin information in a two dimensional array, maintaining position information from the system in the data structure.
 A first naive approach to the boundary conditions would be to for each flip attempt check if one is at a boundary.
 Firstly, this could give more complicated code, and also it would have to be rewritten for each type of system.
-Secondly, it would involve checking several conditions, and if one is at the border, additions.
-In my solution, inspired by exercise 1 in this curse, the position information of the data structure is disregarded, at least when checking neighbor interaction.
+Secondly, it would involve checking several conditions.
+In my solution, inspired by exercise 1 of this curse, the position information of the data structure is disregarded, at least when checking neighbor interaction.
 For each direction, right, left, up, down, there is a vector that gives the next index.
 For example, if you are at position $(x, y)$, the next position to the right would be $(\text{ir}(x), y)$, where \verb|ir| is the vector that gives the index to the right.
 Normally, \verb|ir| at index $i$ is simply $i+1$, likewise for down, \verb|id| at index $j$ is $j-1$.
@@ -141,7 +141,7 @@ In the original Mon-Jasnow the site to flip cannot, of course, be one of the fix
 In the interest of keeping the code general, my solution is somewhat less intuitive, but still highly efficient.
 Since we choose a random number between 1 and $N^2$, the first $N^2$ numbers must be non-fixed, and the fixed columns must be placed at the end of the array.
 As Julia is column based, this corresponds to columns after the Nth column.
-One could of course omit this by generating a number between a given number and some other given number, but in my opinion, that would be less clean code.
+One could of course omit this by generating a number between a given number and some other given number, allowing the fixed sites to be placed both at the beginning and at the end. However, in my opinion, that would be less clean code.
 The solution is to add a positive column at the end, ie. to the right, of the spin array.
 We do not need a negative column, as one never simulates on the positive/negative system, only the positive/positive.
 Using the index vectors, this column is placed \emph{both} to the right and to the left of the system.
@@ -152,6 +152,7 @@ Given a spin configuration array, it is simple to calculate the total energy -- 
 To maintain general code, this sum would also run over the fixed column on the right (remember, I now talk about the position in actual memory, so the left column does not exist here. But for neighbor interaction in the calculation, the index vectors are used).
 The right column has no neighbor on the right, it is not a part of the system!
 Here, the solution is again the index vectors, because the index vector right at position $N_{x+1}$ is $N_{x+1}$!
+The rightmost column ``interacts'' with itself.
 This simply lead to a constant addition in the energy, which we of course are allowed to do.
 
 
@@ -165,11 +166,12 @@ For example, for finding equilibrium time, one solution is to simulate two diffe
 I did this in order to find an approximate value, but another solution, which would require some more computation time, would be to do this every time one ran the system, and use the collected data to infer when to begin measurements.
 Also, much more work could be done in finding a correlation time.
 I did this quite naively, simply measuring every three sweeps.
-\cite{niels} had quite a bit of discussion on this point, and concluded that it would often be sufficient to sample every sweep for Metropolis.
+One source\cite{niels} had quite a bit of discussion on this point, and concluded that it would often be sufficient to sample every sweep for Metropolis.
 It is possible that one could get better results if one had put more work into this, but I believe it would take quite alot more time and also would require spending more time understanding the physics fully.
 
 For obtaining error estimates, I used the Bootstrap method, described in \cite{niels}.
-It is not perfect, for example it is heavily dependent on the number of resamples, I do 700, but it does at the very least give an indication of relative uncertainty between simulations.
+It is not perfect, for example it is heavily dependent on the number of resamples.
+I do 700, but it does at the very least give an indication of relative uncertainty between simulations.
 The method is quite computational demanding, for low values of the lattice size $N$ the Bootstrapping take more time than the simulation!
 
 \section{Results}
@@ -198,9 +200,9 @@ In figure \ref{fig:tau_N} $\tau$ is plotted as a function of N for $T = T_c$.
 Note the logarithmic scales.
 From the exercise text we have that near $T_c$, where t is small,
 \begin{equation}
-  \tau \propto N^{\nu/\mu}
+  \tau \propto N^{\nu/\mu}.
 \end{equation}
-so that in the log-log plot of $\tau(N)$ one should expect the trend to be a line of slope
+In the log-log plot of $\tau(N)$ one should expect the trend to be a line of slope
 \begin{align}
   \frac{\log\tau(N_2) - \log\tau(N_1)}{\log N_2 - \log N_1}
   &= \frac{\log \tau(N_2)/\tau(N_1)}{\log N_2/N_1} \\
