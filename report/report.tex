@@ -165,7 +165,10 @@ Interesting solutions:
 
 
 \section{Results}
-
+Figure \ref{fig:tau_T} shows $\tau$ as a function of $T$ for some values of $N$, calculated with both the original and extended Mon-Jasnow algorithm.
+Going from $N=5$ to $N=30$ it is very obvious that the phase transition is more apparent in both models.
+From $N=30$ to $N=80$ the difference is not as noticable.
+All calculations overestimate $\tau$ relative to Onsager's solution.
 
 \begin{figure}[ht]
   \centering
@@ -178,10 +181,30 @@ Interesting solutions:
   \caption{$\tau$ as a function of T.\label{fig:tau_T}}
 \end{figure}
 
+
+In figure \ref{fig:tau_N} $\tau$ is plotted as a function of N for $T = T_c$.
+Note the logarithmic scales.
+From the exericise text we have that near $T_c$, where t is small,
+\begin{equation}
+  \tau \propto N^{\nu/\mu}
+\end{equation}
+so that in the log-log plot of $\tau(N)$ one should expect the trend to be a line of slope
+\begin{align}
+  \frac{\log\tau(N_2) - \log\tau(N_1)}{\log N_2 - \log N_1}
+  &= \frac{\log \tau(N_2)/\tau(N_1)}{\log N_2/N_1} \\
+  &= \frac{\log N_2^{\nu/\mu}/N_1^{\nu/\mu}}{\log N_2/N_1}\\
+  &= -\mu/\nu = -1.
+\end{align}
+From the figure it appears that the points fall on a line with about negative one slope.
+Note that for large N the uncertainty is very high.
+Running longer simulations would highly likely improve this.
+Also note that for larger N, the torus/klein system is much more stable.
+
 \begin{figure}[ht]
   \centering
   \includegraphics[width=.75\textwidth]{media/tau_N}
-  \caption{$N\tau$ as a function of N for $T=T_c$.\label{fig:tau_N}}
+  \caption{$\tau$ as a function of N for $T=T_c$.
+    Note the logarithmic scales. \label{fig:tau_N}}
 \end{figure}
 
 \begin{figure}[ht]
@@ -234,12 +257,9 @@ The latter possibility could have been found by writing the code more strict in 
 One last point on performance is parallelization.
 The simulation is very CPU-demanding, but not very memory expensive, and should be fit for running on multiple threads.
 One simulation can not be multithreaded, as it has to be sequential, but running multiple simulations at once would be very benifical in leveraging the full potential of the CPU.
-I did try to run two simulations in parallell, but they one was killed by the OS because of memory.
-The memory issue did, however, not arise from the simulation itself, but from the bootstrapping.
-The bootstrap-implementation is vectorized, all the random samples are genereted first, and then Julia's vectorized syntax is used.
-Since we have to store all the random numbers, it is memory intentisive.
-Two possible ways to solve this issue is to 1) store the results from the simulation to file and the do bootstrapping later or 2) see if one could ommit the problem by writing non-vectorizied code that requires less memory.
-I did not persue this further, but it is definitely one of the first improvements it would be logical to attempt.
+I did run my simulations in parallell without any issue.
+The only critical point then is to make sure that no part of the execution, for example the bootstrapping, requires too much memory and that the threads do not overwrite each others results in file.
+
 
 
 As a final note on parallelization, I will mention that I did very briefly attempt further optimization of the neighbor interaction calculation.
