@@ -69,7 +69,7 @@ For this site, determine the change of energy in the system if one were to flip 
 If the change in energy is negative, accept the flip.
 If it is positive, let the probability of flipping it be given by the Boltzmann distribution.
 A natural definition of a time step is a sweep, defined as $N^2$ flip attempts, where $N$ is the dimension of the lattice.
-In the Mon-Jasnow and extended Mon-Jasnow algorithm, one applies the Metropolis method to certain lattice, that is such that there exists another lattice of close resembelance, but for which there exists an interface.
+In the Mon-Jasnow and extended Mon-Jasnow algorithm, one applies the Metropolis method to certain lattice, that is such that there exists another lattice of close resemblance, but for which there exists an interface.
 It can be shown that the tension $\tau$ is a function of the difference in energy of the two systems.
 
 
@@ -89,18 +89,18 @@ This energy is returned to \verb|sweep!|, which carries out one sweep.
 
 
 There are a number of tricks one might use to improve performance.
-Some of these come from insigth to the problem itself and some are of more programatic nature.
+Some of these come from insight to the problem itself and some are of more programmatic nature.
 As examples of tricks from insight into the problem are generating a table of possible $e^{\Delta H/T}$ values, that are used in the flip attempt, and how one calculates the energy difference.
 As a flip will only affect the nearest neighbors (the definition of Ising model), there are only a few possible values for the Boltzmann weights.
-In fact, as we allways accept flips with negative energy change, the only values that needs calculating are $e^{-8/T}$ and $e^{-4/T}$.
-As expontents are computational heavy, this gives a big performance boost.
+In fact, as we always accept flips with negative energy change, the only values that needs calculating are $e^{-8/T}$ and $e^{-4/T}$.
+As exponents are computational heavy, this gives a big performance boost.
 
 
 As for the energy calculation one has several options.
 The naive implementation would calculate the energy of the entire spin matrix for each measurement.
-However, a better approach is to measure only the inital energy, and then cumulatively add the energy change from each flip.
+However, a better approach is to measure only the initial energy, and then cumulatively add the energy change from each flip.
 In our problem, the energy is not really needed, except for debugging and determining when the system reaches equilibrium.
-The only quantity of importance, is the difference in energy between the two systems that the Mon-Jasnow algorithm considers -- fixes positive and negative sides for original Mon-Jasnow, and torus and klein flask for the extended algorithm.
+The only quantity of importance, is the difference in energy between the two systems that the Mon-Jasnow algorithm considers -- fixes positive and negative sides for original Mon-Jasnow, and torus and Klein flask for the extended algorithm.
 These energy differences have simple formulas: two time the magnetization of the rightmost column for the original, as stated in \cite{mon_jasnow}, and for the extended I found the expression
 \begin{equation}
   \sum_y S_{1,y} [ S_{N_x, y} + S_{N_x, N_y+1-y} ],
@@ -108,32 +108,32 @@ These energy differences have simple formulas: two time the magnetization of the
 which is stated without proof.
 As Julia is column oriented in its arrays, this ends up being very efficient to calculate.
 
-Now to the more programatic aspects of my solution.
-There are some solutions in particular that I would like to emphasise.
+Now to the more programmatic aspects of my solution.
+There are some solutions in particular that I would like to emphasize.
 Here I will not discuss the performance in detail, for that see \ref{sec:performance}.
-Firstly, the code is written in a very modul based manner.
+Firstly, the code is written in a very module based manner.
 This makes it easy to change, both cosmetic changes to code and alterations to how one calculates or represents data.
 This gives a very general code, for which I am proud.
 When going from the original algorithm to the extended, only the input data must be changed, the code stays the same.
 This was also very helpful when performing benchmarks and improving performance.
 
-One of the programatic challanges in this problem is the boundary conditions.
+One of the programmatic challenges in this problem is the boundary conditions.
 When calculating neighbor interaction one has to know what the neighbors are.
-Most implementations would problably, even though there are other possibilities, store the spin information in a two dimensional array, maintaining position information from the system in the data structure.
+Most implementations would probably, even though there are other possibilities, store the spin information in a two dimensional array, maintaining position information from the system in the data structure.
 A first naive approach to the boundary conditions would be to for each flip attempt check if one is at a boundary.
 Firstly, this could give more complicated code, and also it would have to be rewritten for each type of system.
 Secondly, it would involve checking several conditions, and if one is at the border, additions.
-In my solution, inspired by excercise 1 in this curse, the position information of the data structure is disregarded, at least when checking neighbor interaction.
+In my solution, inspired by exercise 1 in this curse, the position information of the data structure is disregarded, at least when checking neighbor interaction.
 For each direction, right, left, up, down, there is a vector that gives the next index.
 For example, if you are at position $(x, y)$, the next position to the right would be $(\text{ir}(x), y)$, where \verb|ir| is the vector that gives the index to the right.
 Normally, \verb|ir| at index $i$ is simply $i+1$, likewise for down, \verb|id| at index $j$ is $j-1$.
-However, at the boundaries, the index is such that the boundary condition is met, for example the right index at the rightmost postion $N_x$ would be 1.
+However, at the boundaries, the index is such that the boundary condition is met, for example the right index at the rightmost position $N_x$ would be 1.
 A point of note is that the left and right position is only dependent on $x$ and likewise up and down is only dependent on $y$.
 Thus, the sites can be connected in whatever order one wishes, but only in $x$ and $y$ independently -- the data are like two graphs, one for $x$ and one for $y$.
 At one point, I had the structure so that it was only one graph, the right position was dependent on both $x$ and $y$, and would give new values for $x$ and $y$, allowing arbitrary geometries.
-This would be necessary for the klein bottle geometry, for example, where going right may change the position in $y$.
-However, since one never has to do any calculations on the klein system, only the torus, I chose to reduce the generality of my solution in favor of performance.
-These vectors, describing the structure of the graph, will from here on be refered to as index vectors.
+This would be necessary for the Klein bottle geometry, for example, where going right may change the position in $y$.
+However, since one never has to do any calculations on the Klein system, only the torus, I chose to reduce the generality of my solution in favor of performance.
+These vectors, describing the structure of the graph, will from here on be referred to as index vectors.
 
 The index vectors are central in my solution to setting up the fixed positive and negative columns of the original Mon-Jasnow algorithm.
 When selecting a lattice point at which to attempt a flip, I generate a random number between one and the number of lattice points in my system.
@@ -141,7 +141,7 @@ In the original Mon-Jasnow the site to flip cannot, of course, be one of the fix
 In the interest of keeping the code general, my solution is somewhat less intuitive, but still highly efficient.
 Since we choose a random number between 1 and $N^2$, the first $N^2$ numbers must be non-fixed, and the fixed columns must be placed at the end of the array.
 As Julia is column based, this corresponds to columns after the Nth column.
-One could of course ommit this by generating a number between a given number and some other given number, but in my opinion, that would be less clean code.
+One could of course omit this by generating a number between a given number and some other given number, but in my opinion, that would be less clean code.
 The solution is to add a positive column at the end, ie. to the right, of the spin array.
 We do not need a negative column, as one never simulates on the positive/negative system, only the positive/positive.
 Using the index vectors, this column is placed \emph{both} to the right and to the left of the system.
@@ -151,31 +151,31 @@ Finally, to make this solution work completely, energy calculation has to be con
 Given a spin configuration array, it is simple to calculate the total energy -- simply sum over all neighbor interactions.
 To maintain general code, this sum would also run over the fixed column on the right (remember, I now talk about the position in actual memory, so the left column does not exist here. But for neighbor interaction in the calculation, the index vectors are used).
 The right column has no neighbor on the right, it is not a part of the system!
-Here, the solution is again the index vectors, because the index vector right at positon $N_{x+1}$ is $N_{x+1}$!
+Here, the solution is again the index vectors, because the index vector right at position $N_{x+1}$ is $N_{x+1}$!
 This simply lead to a constant addition in the energy, which we of course are allowed to do.
 
 
 Measurements are not trivial for Monte Carlo simulations.
 There are mainly two aspects of interest, the equilibration time and correlation time.
-When startig the simulatoin, it must be run for some period of time before the system has reached equilibrium.
+When starting the simulation, it must be run for some period of time before the system has reached equilibrium.
 Before this point, it makes no sense to take samples for calculating expectation value.
 Also, after a measurement, one should wait some period of time before making a new measurement, to ensure that the two states are not correlated.
 One might do alot of work on these aspects.
-For example, for finding equilibrium time, one solution is to simulate two different initial conditions, and see when the energy of the two systems stamilize at the same level.
+For example, for finding equilibrium time, one solution is to simulate two different initial conditions, and see when the energy of the two systems stabilize at the same level.
 I did this in order to find an approximate value, but another solution, which would require some more computation time, would be to do this every time one ran the system, and use the collected data to infer when to begin measurements.
 Also, much more work could be done in finding a correlation time.
 I did this quite naively, simply measuring every three sweeps.
 \cite{niels} had quite a bit of discussion on this point, and concluded that it would often be sufficient to sample every sweep for Metropolis.
 It is possible that one could get better results if one had put more work into this, but I believe it would take quite alot more time and also would require spending more time understanding the physics fully.
 
-For obtaining error estimates, I used the Bootstrap methdo, described in \cite{niels}.
-It is not perfect, for example it is heavily dependent on the number of resaples, I do 700, but it does at the very least give an indication of relative uncertainty between simulations.
+For obtaining error estimates, I used the Bootstrap method, described in \cite{niels}.
+It is not perfect, for example it is heavily dependent on the number of resamples, I do 700, but it does at the very least give an indication of relative uncertainty between simulations.
 The method is quite computational demanding, for low values of the lattice size $N$ the Bootstrapping take more time than the simulation!
 
 \section{Results}
-Figure \ref{fig:tau_T} shows $\tau$ as a function of $T$ for some values of $N$, calculated with both the original and extended Mon-Jasnow algorithm, here refered to as the pp and torus systems respectively.
+Figure \ref{fig:tau_T} shows $\tau$ as a function of $T$ for some values of $N$, calculated with both the original and extended Mon-Jasnow algorithm, here referred to as the pp and torus systems respectively.
 Going from $N=5$ to $N=30$ it is very obvious that the phase transition is more apparent in both models.
-From $N=30$ to $N=80$ the difference is not as noticable.
+From $N=30$ to $N=80$ the difference is not as noticeable.
 All calculations overestimate $\tau$ relative to Onsager's solution.
 The torus system performs much better than the pp system, giving both sharper phase transition and values closer to the exact results.
 
@@ -189,7 +189,7 @@ The torus system performs much better than the pp system, giving both sharper ph
   }
   \caption{$\tau$ as a function of T for various $N$
     Also shown is Onsager's exact result (dashed).
-    The results were optained with one million sweeps, an equilibration time of \num{1e5} and 700 resamples in the boostrapping.
+    The results were obtained with one million sweeps, an equilibration time of \num{1e5} and 700 resamples in the bootstrapping.
     \label{fig:tau_T}}
 \end{figure}
 
@@ -217,7 +217,7 @@ Also note that for larger N, the torus system is much more stable than the pp sy
   \includegraphics[width=.75\textwidth]{media/tau_N}
   \caption{$\tau$ as a function of N for $T=T_c$.
     Note the logarithmic scales.
-    The results were optained with one million sweeps, an equilibration time of \num{1e5} and 700 resamples in the boostrapping.
+    The results were obtained with one million sweeps, an equilibration time of \num{1e5} and 700 resamples in the bootstrapping.
     \label{fig:tau_N}}
 \end{figure}
 
@@ -243,7 +243,7 @@ The figure suggests that the true value of $\tau_0$ is higher than the one I fou
 
 \section{Findings related to performance\label{sec:performance}}
 During the development process, several benchmarks were made, and I discovered some small changes that had huge impact on performance.
-Especially pices of code that are involved in the very core of the simulation loop, the flipping, are vital to streamline as they are executed several million, or even billion, times.
+Especially pieces of code that are involved in the very core of the simulation loop, the flipping, are vital to streamline as they are executed several million, or even billion, times.
 
 The most successful change I made with regards to performance, was also quite subtle.
 At the core of the simulation, in the flipping attempt, the function \verb|step!| in my code, one has to calculate the interaction between neighbors.
@@ -269,21 +269,21 @@ I changed this snippet to
 \end{lstlisting}
 The difference between the two techniques is that the former makes a new a list, to which is applied the built in sum function(at another place in the code) while in the latter the sum is carried out directly, not having to allocate a list.
 The change in performance was huge -- going from 34 seconds to 3.5 seconds in a benchmark with $N=30$ and hundred thousand sweeps.
-That corresponds to cutting the computaton time from one hour to six minutes!
+That corresponds to cutting the computation time from one hour to six minutes!
 It is worth mentioning that the former solution is not only unnecessarily creating a list, the list is created through a loop!
 However, even a list written out, not created using a list comprehension, is slower than the direct sum, with a factor of about 2.
 
 At one point, I changed the type of the index vectors from Int64 to UInt8, under the assumption that one would not simulate systems of $N=255$.
-This would obviously save memory, but strangely it had a negative inpact on speed, with a factor of about 3.
-I did not persue this in depth, so I do not now the reason for this.
+This would obviously save memory, but strangely it had a negative impact on speed, with a factor of about 3.
+I did not pursue this in depth, so I do not now the reason for this.
 My theory is that either there is something inherent with Julia or the computer that makes 64 bits faster, or that the compiler performs some hidden conversion from UInt8 to Int64 somewhere in the loop.
 The latter possibility could have been found by writing the code more strict in type, but I did not prioritize this.
 
 
 One last point on performance is parallelization.
 The simulation is very CPU-demanding, but not very memory expensive, and should be fit for running on multiple threads.
-One simulation can not be multithreaded, as it has to be sequential, but running multiple simulations at once would be very benifical in leveraging the full potential of the CPU.
-I did run my simulations in parallell without any issue, with as many as four simulations at a time!
+One simulation can not be multi threaded, as it has to be sequential, but running multiple simulations at once would be very beneficial in leveraging the full potential of the CPU.
+I did run my simulations in parallel without any issue, with as many as four simulations at a time!
 The only critical point then is to make sure that no part of the execution, for example the bootstrapping, requires too much memory and that the threads do not overwrite each others results in file.
 In fact, my first implementation of bootstrap was vectorized, using alot of memory for long simulations, and I had to rewrite it into using less memory in order to do this.
 
