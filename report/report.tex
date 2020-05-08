@@ -31,8 +31,65 @@ The code is separated into files, the main part being in \verb|utils.jl|.
 Nothing should be run directly from \verb|utils.jl|, it contains the machinery that can be used from other designated scripts.
 For each type of ``operation'' that we want to execute, there should exist a file, that extends \verb|utils.jl|, for example \verb|task1.jl| and \verb|investigate_error.jl|.
 
+Firstly, a \emph{very} brief explanation of the Metropolis method.
+Given a 2D Ising lattice, select at random one lattice site.
+For this site, determine the change of energy in the system if one were to flip this spin.
+If the change in energy is negative, accept the flip.
+If it is positive, let the probability of flipping it be given by the Boltzmann distribution.
+A natural definition of a time step is a sweep, defined as $N^2$ flip attempts, where $N$ is the dimension of the lattice.
+In the Mon-Jasnow and extended Mon-Jasnow algorithm, one applies the Metropolis method to certain lattice, that is such that there exists another lattice of close resembelance, but for which there exists an interface.
+It can be shown that the tension $\tau$ is a function of the difference in energy of the two systems.
 
-Metropolis: select at random -> attempt flip
+There are a number of tricks one might use to improve performance.
+Some of these come from insigth to the problem itself and some are of more programatic nature.
+As examples of tricks from insight into the problem are generating a table of possible $e^{\Delta H/T}$ values, that are used in the flip attempt, and how one calculates the energy difference.
+As a flip will only affect the nearest neighbors (the definition of Ising model), there are only a few possible values for the Boltzmann weights.
+In fact, as we allways accept flips with negative energy change, the only values that needs calculating are $e^{-8/T}$ and $e^{-4/T}$.
+As expontents are computational heavy, this gives a big performance boost.
+
+
+As for the energy calculation one has several options.
+The naive implementation would calculate the energy of the entire spin matrix for each measurement.
+However, a better approach is to measure only the inital energy, and then cumulatively add the energy change from each flip.
+In our problem, the energy is not really needed, except for debugging and determining when the system reaches equilibrium.
+The only quantity of importance, is the difference in energy between the two systems that the Mon-Jasnow algorithm considers -- fixes positive and negative sides for original Mon-Jasnow, and torus and klein flask for the extended algorithm.
+These energy differences have simple formulas: two time the magnetization of the rightmost column for the original, as stated in \cite{mon_jasnow}, and for the extended I found the expression
+\begin{equation}
+  \sum_y S_{1,y} [ S_{N_x, y} + S_{N_x, N_y+1-y} ],
+\end{equation}
+which is stated without proof.
+As Julia is column oriented in its arrays, this ends up being very efficient to calculate.
+
+Now to the more programatic aspects of my solution.
+There are some solutions in particular that I would like to emphasise.
+Here I will not discuss the performance in detail, for that see \ref{sec:performance}.
+Firstly, the code is written in a very modul based manner.
+This makes it easy to change, both cosmetic changes to code and alterations to how one calculates or represents data.
+This gives a very general code, for which I am proud.
+When going from the original algorithm to the extended, only the input data must be changed, the code stays the same.
+This was also very helpful when performing benchmarks and improving performance.
+
+One of the programatic challanges in this problem is the boundary conditions.
+When calculating neighbor interaction one has to know what the neighbors are.
+Most implementations would problably, even though there are other possibilities, store the spin information in a two dimensional array, maintaining position information from the system in the data structure.
+A first naive approach to the boundary conditions would be to for each flip attempt check if one is at a boundary.
+Firstly, this could give more complicated code, and also it would have to be rewritten for each type of system.
+Secondly, it would involve checking several conditions, and if one is at the border, additions.
+In my solution, inspired by excercise 1 in this curse, the position information of the data structure is disregarded, at least when checking neighbor interaction.
+For each direction, right, left, up, down, there is a vector that gives the next index.
+For example, if you are at position $(x, y)$, the next position to the right would be $(\text{ir}(x), y)$, where \verb|ir| is the vector that gives the index to the right.
+Normally, \verb|ir| at index $i$ is simply $i+1$, likewise for down, \verb|id| at index $j$ is $j-1$.
+However, at the boundaries, the index is such that the boundary condition is met, for example the right index at the rightmost postion $N_x$ would be 1.
+A point of note is that the left and right position is only dependent on $x$ and likewise up and down is only dependent on $y$.
+Thus, the sites can be connected in whatever order one wishes, but only in $x$ and $y$ independently -- the data are like two graphs, one for $x$ and one for $y$.
+At one point, I had the structure so that it was only one graph, the right position was dependent on both $x$ and $y$, and would give new values for $x$ and $y$, allowing arbitrary geometries.
+This would be necessary for the klein bottle geometry, for example, where going right may change the position in $y$.
+However, since one never has to do any calculations on the klein system, only the torus, I chose to reduce the generality of my solution in favor of performance.
+These vectors, describing the structure of the graph, will from here on be refered to as index vectors.
+
+The index vectors are central in my solution to setting up the fixed positive and negative columns of the original 
+
+
 
 Interesting solutions:
 - Indexes for neighbor points
@@ -66,7 +123,7 @@ Interesting solutions:
 \end{figure}
 
 
-\section{Findings related to performance}
+\section{Findings related to performance\label{sec:performance}}
 During the development process, several benchmarks were made, and I discovered some small changes that had huge impact on performance.
 Especially pices of code that are involved in the very core of the simulation loop, the flipping, are vital to streamline as they are executed several million times.
 
@@ -77,6 +134,10 @@ Especially pices of code that are involved in the very core of the simulation lo
   |-> If one is able to optimize it, very advantegous.
 - Neighbor sum
   |-> 30s -> 3.5s ( 1 hour -> 6 seconds of simulation )
+- Only uses one core, and is fairly cheap on memory.
+  Should be possible to run multiple at once.
+  Problem that bootstrap uses much memory -> killed
+  Solution: bootstrap later or non-vectorized
 
 
 \begin{thebibliography}{9}
