@@ -117,11 +117,6 @@ function step!(
     Attempt to flip one spin
 
     ir, il, iu, id are lookups for index right, left, up, down
-
-    TODO:
-     . Consider if one should change order of operations,
-    to reduce operations. Ie. calculate acceptance_criterion
-    before r, then throw away at once if DH < 0.
     """
 
     # This section is not as trivial as it seems
@@ -236,108 +231,6 @@ function compare_and_plot_initial_H(Nx, Ny, T, N_sweeps)
     plt.show()
 
     return H_inf_time, H_zero_time, m_inf, m_zero
-end
-
-
-function simulate_over_T!(
-    T_range,
-    H,
-    Nx,
-    Ny,
-    N_sweeps,
-    N_sweep_eq,
-    ir, il, iu, id;
-    N_resamples=100,
-    t_sample=1,  # Step for selecting measurements
-    difference_function=pp_pn_difference,
-    bootstrap=false,
-)
-    tau_list = zero(T_range)
-    if bootstrap
-        tau_std_list = zero(T_range)
-    end
-
-    for (i, T) in enumerate(T_range)
-        H_time, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
-
-        if bootstrap
-            N_tau, N_tau_std = bootstrap_tau(m[N_sweep_eq:t_sample:end], T, N_resamples)
-            tau_std = N_tau_std/Ny
-            tau_std_list[i] = tau_std
-        else
-            N_tau = calculate_tau(m, T, N_sweep_eq, t_sample=t_sample)
-        end
-        tau = N_tau / Ny
-        tau_list[i] = tau
-        println("T: $T")
-        if bootstrap
-            println(" .tau: $tau, Ntau: $N_tau, std: $tau_std")
-        else
-            println(" .tau: $tau, Ntau: $N_tau")
-        end
-    end
-
-    if bootstrap
-        return tau_list, tau_std_list
-    else
-        return tau_list
-    end
-end
-
-
-function simulate_over_N(
-    Nx_range,
-    N_sweeps,
-    N_sweeps_eq,
-    T;
-    T_hamil=:inf,
-    t_sample=1,
-    system=:pp,
-    bootstrap=false,
-    N_resamples=100,  # For bootstrap
-)
-    N_tau_list = zeros(length(Nx_range))
-    if bootstrap
-        N_tau_std_list = zeros(length(Nx_range))
-    end
-
-    for (i, Nx) in enumerate(Nx_range)
-        Ny = Nx
-        N = Nx*Ny
-
-        if system == :pp
-            H = get_pp_hamiltonian(Nx, Ny)
-            ir, il, iu, id = get_pp_index_vectors(Nx, Ny)
-            difference_function = pp_pn_difference
-        elseif system == :torus
-            H = get_random_hamiltonian(Nx, Ny)
-            ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
-            difference_function = torus_klein_difference
-        else
-            throw(ArgumentError("Invalid system"))
-        end
-
-        H_time, m = simulate!(H, Nx, Ny, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
-        # Give feedback that simulation has finished and tau calculation begins
-        print(".")
-        if bootstrap
-            N_tau, N_tau_std = bootstrap_tau(m[N_sweeps_eq:t_sample:end], T, N_resamples)
-            N_tau_std_list[i] = N_tau_std
-        else
-            N_tau = calculate_tau(m, T, N_sweeps_eq, t_sample=t_sample)
-        end
-
-        tau = N_tau / Ny
-        N_tau_list[i] = N_tau
-        println("Nx: $Nx")
-        println(" .tau: $tau, Ntau: $N_tau")
-    end
-
-    if bootstrap
-        return N_tau_list, N_tau_std_list
-    else
-        return N_tau_list
-    end
 end
 
 
@@ -509,53 +402,7 @@ function bootstrap_tau(H_diff, T, N_resamples)
     tau = -T * mean(logs)
     tau_std = T * std(logs)
 
-    # party_ratio_samples = party_ratio[rand(1:n, (N_resamples, n))]
-    # party_ratio_mean = mean(party_ratio_samples, dims=2)
-    # log_of_mean = log.(party_ratio_mean)
-
-    # tau = -T * mean(log_of_mean)
-    # tau_std = T * std(log_of_mean)
-
     return tau, tau_std
-end
-
-
-function plot_tau_X(X, tau, tau_std=undef)
-    if tau_std!=undef
-        plt.errorbar(X, tau, yerr=tau_std)
-    else
-        plt.plot(X, tau)
-    end
-    plt.axhline(y=0, linestyle=":", color="gray", linewidth=0.3)
-    plt.axvline(x=1, linestyle=":", color="gray", linewidth=0.3)
-    plt.show()
-end
-
-
-function write_tau_X(X, tau, filename, tau_std=undef)
-    if tau_std==undef
-        writedlm(string("datadir/", filename, ".dat"), [X, tau])
-    else
-        writedlm(string("datadir/", filename, "_std.dat"), [X, tau, tau_std])
-
-
-    end
-end
-
-
-function read_tau_X(filename, tau_std=false)
-    if tau_std
-        data = readdlm(string("datadir/", filename, "_std.dat"))
-        X = data[1, :]
-        tau = data[2, :]
-        tau_std = data[3, :]
-        return X, tau, tau_std
-    else
-        data = readdlm(string("datadir/", filename, ".dat"))
-        X = data[1, :]
-        tau = data[2, :]
-        return X, tau
-    end
 end
 
 
@@ -589,15 +436,3 @@ function onsager(T)
     """Gives onsagers solution to tau(T/Tc)"""
     return 2 - Tc*T*log(coth(1/(T*Tc)))
 end
-
-# Nx = 5
-# Ny = 5
-# N = Nx * Ny
-# T = 1
-
-# H = get_random_Hamiltonian(Nx, Ny)
-# exponent_lookup = get_exponent_lookup(T)
-# ir, il, iu, id = get_torus_index_vectors(Nx, Ny)
-# for i in 1:100
-#     step!(H, N, T, exponent_lookup, ir, il, iu, id)
-# end
