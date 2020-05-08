@@ -38,6 +38,7 @@ options, rest = getopt.gnu_getopt(sys.argv[1:], 't:', [
     "data=",
     "Nmin=",
     "Nmax=",
+    "system=",
 ])
 
 
@@ -46,6 +47,7 @@ ts = ""
 save = False
 N_min = -1
 N_max = -1
+system = ""
 for opt, arg in options:
     if opt == "--title":
         title = arg
@@ -62,12 +64,16 @@ for opt, arg in options:
         N_min = int(arg)
     elif opt == "--Nmax":
         N_max = int(arg)
+    elif opt == "--system":
+        system = arg
 
 
 df = pandas.read_csv(filename, delimiter="\t")
 df["t"] = t(df["T"])
 # Remove values over critica
 df = df[df["t"]>0]
+if system:
+    df = df[df["system"]==system]
 
 if N_min != -1:
     df = df[df["N_sweeps"] >= N_min]
@@ -99,7 +105,7 @@ else:
 if title:
     plt.title(title)
 
-plt.plot([0, 5], [3.99, 25])
+#plt.plot([0, 5], [3.99, 25])
 plt.xlabel("$1/Nt$")
 plt.ylabel("$\\frac{\\tau}{t}$")
 plt.axhline(y=0, linestyle="dashed", color="gray", linewidth=0.2)

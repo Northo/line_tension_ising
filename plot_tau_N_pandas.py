@@ -34,7 +34,7 @@ def usage():
 options, rest = getopt.gnu_getopt(sys.argv[1:], 't:', [
     "title=",
     "save=",
-    "logy",
+    "log",
     "data=",
     "Nmin=",
     "Nmax=",
@@ -55,7 +55,7 @@ for opt, arg in options:
     elif opt in ("--save"):
         save = True
         figname = arg
-    elif opt == "--logy":
+    elif opt == "--log":
         plt.xscale("log")
         plt.yscale("log")
     elif opt == "--data":
@@ -83,21 +83,26 @@ if N_max != -1:
 
 
 systems = df.groupby(["system"])
+i = 0
+markers = ["D", "s", "^", "v", "o"]
 for system_name, system in systems:
     plt.errorbar(
         system["N"],
-        system["N"]*system["tau"],
+        system["tau"],
         yerr=system["N"]*system["tau_std"],
-        fmt="o",
+        fmt=markers[i],
+        capsize=3,
         label=system_name,
     )
+    i += 1
 
 if title:
     plt.title(title)
 
 plt.legend()
 plt.xlabel("N")
-plt.ylabel("$N\\tau$")
+plt.ylabel("$\\tau$")
+plt.gca().set_xticks([2, 4, 6, 8, 10, 20, 25])
 
 if save:
     plt.savefig(figname)
