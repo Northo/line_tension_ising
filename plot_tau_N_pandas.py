@@ -56,6 +56,7 @@ for opt, arg in options:
         save = True
         figname = arg
     elif opt == "--logy":
+        plt.xscale("log")
         plt.yscale("log")
     elif opt == "--data":
         filename = arg

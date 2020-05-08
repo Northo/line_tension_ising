@@ -345,11 +345,16 @@ function over_T_N(
     T_N_pairs,
     N_sweeps_array,
     N_sweeps_eq_array,
-    system,
+    systems,
     N_resamples;
     datafile
 )
-    for (pair, N_sweeps, N_sweeps_eq) in zip(T_N_pairs, N_sweeps_array, N_sweeps_eq_array)
+    for (pair, N_sweeps, N_sweeps_eq, system) in zip(
+        T_N_pairs,
+        N_sweeps_array,
+        N_sweeps_eq_array,
+        systems,
+    )
         T, N = pair
 
         if system == :pp
