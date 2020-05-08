@@ -87,9 +87,24 @@ This would be necessary for the klein bottle geometry, for example, where going 
 However, since one never has to do any calculations on the klein system, only the torus, I chose to reduce the generality of my solution in favor of performance.
 These vectors, describing the structure of the graph, will from here on be refered to as index vectors.
 
-The index vectors are central in my solution to setting up the fixed positive and negative columns of the original 
-
-
+The index vectors are central in my solution to setting up the fixed positive and negative columns of the original Mon-Jasnow algorithm.
+When selecting a lattice point at which to attempt a flip, I generate a random number between one and the number of lattice points in my system.
+In the original Mon-Jasnow the site to flip cannot, of course, be one of the fixed columns.
+In the interest of keeping the code general, my solution is somewhat less intuitive, but still highly efficient.
+Since we choose a random number between 1 and $N^2$, the first $N^2$ numbers must be non-fixed, and the fixed columns must be placed at the end of the array.
+As Julia is column based, this corresponds to columns after the Nth column.
+One could of course ommit this by generating a number between a given number and some other given number, but in my opinion, that would be less clean code.
+The solution is to add a positive column at the end, ie. to the right, of the spin array.
+We do not need a negative column, as one never simulates on the positive/negative system, only the positive/positive.
+Using the index vectors, this column is placed \emph{both} to the right and to the left of the system.
+The index right vector at position $N_x$ gives $N_{x+1}$ where the positive column is.
+The clever part is that the index left vector at position $1$ is $N_{x+1}$!
+Finally, to make this solution work completely, energy calculation has to be considered.
+Given a spin configuration array, it is simple to calculate the total energy -- simply sum over all neighbor interactions.
+To maintain general code, this sum would also run over the fixed column on the right (remember, I now talk about the position in actual memory, so the left column does not exist here. But for neighbor interaction in the calculation, the index vectors are used).
+The right column has no neighbor on the right, it is not a part of the system!
+Here, the solution is again the index vectors, because the index vector right at positon $N_{x+1}$ is $N_{x+1}$!
+This simply lead to a constant addition in the energy, which we of course are allowed to do.
 
 Interesting solutions:
 - Indexes for neighbor points
