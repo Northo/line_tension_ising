@@ -8,6 +8,7 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{float}
 
 \newcommand{\del}[2]{\frac{\partial #1}{\partial #2}}  % Partial derivative
 \newcommand{\deriv}[2]{\frac{\mathrm{d} #1}{\mathrm{d} #2}}  % Derivative
@@ -168,26 +169,30 @@ Interesting solutions:
 
 
 \section{Results}
-Figure \ref{fig:tau_T} shows $\tau$ as a function of $T$ for some values of $N$, calculated with both the original and extended Mon-Jasnow algorithm.
+Figure \ref{fig:tau_T} shows $\tau$ as a function of $T$ for some values of $N$, calculated with both the original and extended Mon-Jasnow algorithm, here refered to as the pp and torus systems respectively.
 Going from $N=5$ to $N=30$ it is very obvious that the phase transition is more apparent in both models.
 From $N=30$ to $N=80$ the difference is not as noticable.
 All calculations overestimate $\tau$ relative to Onsager's solution.
+The torus system performs much better than the pp system, giving both sharper phase transition and values closer to the exact results.
 
-\begin{figure}[ht]
+\begin{figure}[H]
   \centering
-  \subcaptionbox{Torus}{
+  \subcaptionbox{Torus system}{
     \includegraphics[width=.47\textwidth]{media/tau_T_torus}
   }
-  \subcaptionbox{PP}{
+  \subcaptionbox{PP system}{
     \includegraphics[width=.47\textwidth]{media/tau_T_pp}
   }
-  \caption{$\tau$ as a function of T.\label{fig:tau_T}}
+  \caption{$\tau$ as a function of T for various $N$
+    Also shown is Onsager's exact result (dashed).
+    The results were optained with one million sweeps, an equilibration time of \num{1e5} and 700 resamples in the boostrapping.
+    \label{fig:tau_T}}
 \end{figure}
 
 
 In figure \ref{fig:tau_N} $\tau$ is plotted as a function of N for $T = T_c$.
 Note the logarithmic scales.
-From the exericise text we have that near $T_c$, where t is small,
+From the exercise text we have that near $T_c$, where t is small,
 \begin{equation}
   \tau \propto N^{\nu/\mu}
 \end{equation}
@@ -200,20 +205,31 @@ so that in the log-log plot of $\tau(N)$ one should expect the trend to be a lin
 \end{align}
 From the figure it appears that the points fall on a line with about negative one slope.
 Note that for large N the uncertainty is very high.
-Running longer simulations would highly likely improve this.
-Also note that for larger N, the torus/klein system is much more stable.
+Running longer simulations would likely improve this.
+Also note that for larger N, the torus system is much more stable than the pp system.
 
-\begin{figure}[ht]
+\begin{figure}[H]
   \centering
   \includegraphics[width=.75\textwidth]{media/tau_N}
   \caption{$\tau$ as a function of N for $T=T_c$.
-    Note the logarithmic scales. \label{fig:tau_N}}
+    Note the logarithmic scales.
+    The results were optained with one million sweeps, an equilibration time of \num{1e5} and 700 resamples in the boostrapping.
+    \label{fig:tau_N}}
 \end{figure}
 
-\begin{figure}[ht]
+As for estimating $\tau_0$ see figure \ref{fig:tau_TN}.
+
+
+\begin{figure}[H]
   \centering
-  \includegraphics[width=.75\textwidth]{media/tau_TN}
-  \caption{$\tau/t$ as a function of $\frac{1}{N t}$.\label{fig:tau_TN}}
+  \subcaptionbox{$\tau/t$ of $1/Nt$}{
+    \includegraphics[width=.47\textwidth]{media/tau_TN}
+  }
+  \subcaptionbox{$\tau/t$ of $Nt$}{
+    \includegraphics[width=.47\textwidth]{media/tau_TN_alt}
+  }
+  \caption{$\tau/t$ for various $Nt$ used to estimate $\tau_0$, found with linear regression.
+    \label{fig:tau_TN}}
 \end{figure}
 
 

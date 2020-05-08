@@ -116,7 +116,7 @@ y_data = df["tau"]/df["t"]
 slope, intercept, r, p, std_err = stats.linregress(x_data, y_data)
 
 curve_x = np.array([0, np.max(x_data)])
-plt.plot(curve_x, curve_x*slope + intercept, label=f"$\\tau_0 = {intercept:.2f}\\pm{std_err:.2f}$")
+plt.plot(curve_x, curve_x*slope + intercept, label=f"$\\tau_0 = {intercept:.2f}$")
 plt.xlabel("$1/Nt$")
 plt.ylabel("$\\frac{\\tau}{t}$")
 plt.axhline(y=0, linestyle="dashed", color="gray", linewidth=0.2)
