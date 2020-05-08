@@ -1,16 +1,43 @@
 \documentclass{article}
 
 \usepackage{amsmath}
-\usepackage{tikz}
 \usepackage{parskip}
 \usepackage{siunitx}
 \usepackage{subcaption}
+%\usepackage{beramono}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage[usenames,dvipsnames]{xcolor}
 
 \newcommand{\del}[2]{\frac{\partial #1}{\partial #2}}  % Partial derivative
 \newcommand{\deriv}[2]{\frac{\mathrm{d} #1}{\mathrm{d} #2}}  % Derivative
 \newcommand{\dderiv}[2]{\frac{\mathrm{d}^2 #1}{\mathrm{d} #2^2}}  % Second derivative
 \newcommand{\expval}[1]{\langle #1 \rangle}
 
+%%
+%% Julia definition (c) 2014 Jubobs
+%%
+\lstdefinelanguage{Julia}%
+  {morekeywords={abstract,break,case,catch,const,continue,do,else,elseif,%
+      end,export,false,for,function,immutable,import,importall,if,in,%
+      macro,module,otherwise,quote,return,switch,true,try,type,typealias,%
+      using,while},%
+   sensitive=true,%
+   alsoother={$},%
+   morecomment=[l]\#,%
+   morecomment=[n]{\#=}{=\#},%
+   morestring=[s]{"}{"},%
+   morestring=[m]{'}{'},%
+}[keywords,comments,strings]%
+
+\lstset{%
+    language         = Julia,
+    basicstyle       = \ttfamily,
+    keywordstyle     = \bfseries\color{blue},
+    stringstyle      = \color{magenta},
+    commentstyle     = \color{ForestGreen},
+    showstringspaces = false,
+}
 \title{Exam Computational Physics\\
   2020}
 \author{Thorvald M. Ballestad}
@@ -112,7 +139,17 @@ There are mainly two aspects of interest, the equilibration time and correlation
 When startig the simulatoin, it must be run for some period of time before the system has reached equilibrium.
 Before this point, it makes no sense to take samples for calculating expectation value.
 Also, after a measurement, one should wait some period of time before making a new measurement, to ensure that the two states are not correlated.
+One might do alot of work on these aspects.
+For example, for finding equilibrium time, one solution is to simulate two different initial conditions, and see when the energy of the two systems stamilize at the same level.
+I did this in order to find an approximate value, but another solution, which would require some more computation time, would be to do this every time one ran the system, and use the collected data to infer when to begin measurements.
+Also, much more work could be done in finding a correlation time.
+I did this quite naively, simply measuring every three sweeps.
+\cite{niels} had quite a bit of discussion on this point, and concluded that it would often be sufficient to sample every sweep for Metropolis.
+It is possible that one could get better results if one had put more work into this, but I believe it would take quite alot more time and also would require spending more time understanding the physics fully.
 
+For obtaining error estimates, I used the Bootstrap methdo, described in \cite{niels}.
+It is not perfect, for example it is heavily dependent on the number of resaples, I do 700, but it does at the very least give an indication of relative uncertainty between simulations.
+The method is quite computational demanding, for low values of the lattice size $N$ the Bootstrapping take more time than the simulation.
 
 
 - Bootstrap and measurements
@@ -136,7 +173,7 @@ Interesting solutions:
     \includegraphics[width=.47\textwidth]{media/tau_T_torus}
   }
   \subcaptionbox{PP}{
-    \includegraphics[width=.47\textwidth]{media/tau_T_torus}
+    \includegraphics[width=.47\textwidth]{media/tau_T_pp}
   }
   \caption{$\tau$ as a function of T.\label{fig:tau_T}}
 \end{figure}
@@ -156,15 +193,62 @@ Interesting solutions:
 
 \section{Findings related to performance\label{sec:performance}}
 During the development process, several benchmarks were made, and I discovered some small changes that had huge impact on performance.
-Especially pices of code that are involved in the very core of the simulation loop, the flipping, are vital to streamline as they are executed several million times.
+Especially pices of code that are involved in the very core of the simulation loop, the flipping, are vital to streamline as they are executed several million, or even billion, times.
 
-- Index vectors, not having to create the tuples at the expense of using some more memory.
-- UInt8 -> Integer, possibly some silent conversions that I did not find.
-- Structs
-- Optimizing neighbor funciton failed.
-  |-> If one is able to optimize it, very advantegous.
-- Neighbor sum
-  |-> 30s -> 3.5s ( 1 hour -> 6 seconds of simulation )
+The most successful change I made with regards to performance, was also quite subtle.
+At the core of the simulation, in the flipping attempt, the function \verb|step!| in my code, one has to calculate the interaction between neighbors.
+In the old version of the neighbor interaction calculation I had the following snippet, generating a vector of neighbor spins.
+
+%\begin{minipage}{\linewidth}
+\begin{lstlisting}
+  return [H[(y, x)] for (y,x) in [
+      (y, ir[x]),  # Right
+      (y, il[x]),  # Left
+      (iu[y], x),  # Up
+      (id[y], x),  # Down
+  ]]
+\end{lstlisting}
+%\end{minipage}
+Here, \verb|H| is the spin array and \verb|ir, il, iu, id| are the index vectors.
+I changed this snippet to
+\begin{lstlisting}
+  return (y, ir[x])+  # Right
+         (y, il[x])+  # Left
+         (iu[y], x)+  # Up
+         (id[y], x)   # Down
+\end{lstlisting}
+The difference between the two techniques is that the former makes a new a list, to which is applied the built in sum function while in the latter the sum is carried out directly, not having to allocate a list.
+Also, the former is created with a loop.
+However, even a list written out, not created using a list comprehension, is slower than the direct sum, with a factor of about 2.
+This is in fact one of the points mentioned in Julia's page on performance tips, direct sum instead of summing over a list.
+The change in performance was huge -- going from 34 seconds to 3.5 seconds in a benchmark with $N=30$ and hundred thousand sweeps.
+That corresponds to cutting the computaton time from one hour to six minutes!
+
+At one point, I changed the type of the index vectors from Int64 to UInt8, under the assumption that one would not simulate systems of $N=255$.
+This would obviously save memory, but strangely it had a negative inpact on speed, with a factor of about 3.
+I did not persue this in depth, so I do not now the reason for this.
+My theory is that either there is something inherent with Julia or the computer that makes 64 bits faster, or that the compiler performs some hidden conversion of the UInt8.
+The latter possibility could have been found by writing the code more strict in type, but I did not prioritize this.
+
+
+One last point on performance is parallelization.
+The simulation is very CPU-demanding, but not very memory expensive, and should be fit for running on multiple threads.
+One simulation can not be multithreaded, as it has to be sequential, but running multiple simulations at once would be very benifical in leveraging the full potential of the CPU.
+I did try to run two simulations in parallell, but they one was killed by the OS because of memory.
+The memory issue did, however, not arise from the simulation itself, but from the bootstrapping.
+The bootstrap-implementation is vectorized, all the random samples are genereted first, and then Julia's vectorized syntax is used.
+Since we have to store all the random numbers, it is memory intentisive.
+Two possible ways to solve this issue is to 1) store the results from the simulation to file and the do bootstrapping later or 2) see if one could ommit the problem by writing non-vectorizied code that requires less memory.
+I did not persue this further, but it is definitely one of the first improvements it would be logical to attempt.
+
+
+As a final note on parallelization, I will mention that I did very briefly attempt further optimization of the neighbor interaction calculation.
+The neighbor interaction consists of accessing four spin values and summing them.
+As mentioned, speeding up this operation is very impactful.
+Utilizing the SIMD instructions for multiplying these four values would probably give a considerable speedup.
+I did try this, but was not successful.
+
+  |-> 30s -> 3.5s ( 1 hour -> 6 minutes of simulation )
 - Only uses one core, and is fairly cheap on memory.
   Should be possible to run multiple at once.
   Problem that bootstrap uses much memory -> killed
