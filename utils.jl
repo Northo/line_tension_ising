@@ -347,7 +347,8 @@ function over_T_N(
     N_sweeps_eq_array,
     systems,
     N_resamples;
-    datafile
+    datafile,
+    N_sample=3
 )
     for (pair, N_sweeps, N_sweeps_eq, system) in zip(
         T_N_pairs,
@@ -372,7 +373,7 @@ function over_T_N(
         H_time, m = simulate!(H, N, N, T, N_sweeps, ir, il, iu, id, difference_function=difference_function)
 
         print(".")  # Indicate simulate finished, only boot left
-        N_tau, N_tau_std = bootstrap_tau(m[N_sweeps_eq:end], T, N_resamples)
+        N_tau, N_tau_std = bootstrap_tau(m[N_sweeps_eq:N_sample:end], T, N_resamples)
         print(".")
         tau = N_tau / N
         tau_std = N_tau_std / N
@@ -497,12 +498,23 @@ function bootstrap_tau(H_diff, T, N_resamples)
     """
     n = length(H_diff)
     party_ratio = exp.(-H_diff/T)
-    party_ratio_samples = party_ratio[rand(1:n, (N_resamples, n))]
-    party_ratio_mean = mean(party_ratio_samples, dims=2)
-    log_of_mean = log.(party_ratio_mean)
+    taus = Vector(undef, N_resamples)
+    tau_stds = Vector(undef, N_resamples)
+    for i in 1:N_resamples
+        party_ratio_sample = party_ratio[rand(1:n)]
+        party_ratio_mean = mean(party_ratio_sample)
+        taus[i] = party_ratio_mean
+    end
+    logs = log.(taus)
+    tau = -T * mean(logs)
+    tau_std = T * std(logs)
 
-    tau = -T * mean(log_of_mean)
-    tau_std = T * std(log_of_mean)
+    # party_ratio_samples = party_ratio[rand(1:n, (N_resamples, n))]
+    # party_ratio_mean = mean(party_ratio_samples, dims=2)
+    # log_of_mean = log.(party_ratio_mean)
+
+    # tau = -T * mean(log_of_mean)
+    # tau_std = T * std(log_of_mean)
 
     return tau, tau_std
 end
