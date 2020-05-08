@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[12pt, a4paper]{article}
 
 \usepackage{amsmath}
 \usepackage{parskip}
@@ -9,6 +9,7 @@
 \usepackage{listings}
 \usepackage[usenames,dvipsnames]{xcolor}
 \usepackage{float}
+\usepackage[margin=2cm]{geometry}
 
 \newcommand{\del}[2]{\frac{\partial #1}{\partial #2}}  % Partial derivative
 \newcommand{\deriv}[2]{\frac{\mathrm{d} #1}{\mathrm{d} #2}}  % Derivative
@@ -70,6 +71,21 @@ If it is positive, let the probability of flipping it be given by the Boltzmann 
 A natural definition of a time step is a sweep, defined as $N^2$ flip attempts, where $N$ is the dimension of the lattice.
 In the Mon-Jasnow and extended Mon-Jasnow algorithm, one applies the Metropolis method to certain lattice, that is such that there exists another lattice of close resembelance, but for which there exists an interface.
 It can be shown that the tension $\tau$ is a function of the difference in energy of the two systems.
+
+
+Here is a quick overview of the code.
+Then follows a discussion of the parts and solutions that I believe are the most interesting.
+The spin states are stored in a $N \times N$ array \verb|H|, as $+1$ and $-1$.
+The core of the simulation is the flip attempt, represented with the function \verb|step!|.
+This function selects a random lattice site and makes the flip attempt at that site.
+When deciding whether to flip the spin or not, the change in energy must be calculated.
+This is done by \verb|neighbor_interaction_sum|.
+After the flip attempt, the change in energy, which might be zero, is returned.
+This energy is returned to \verb|sweep!|, which carries out one sweep.
+\verb|sweep!| sums up the energy change from all the steps, and finally returns the total change after one sweep.
+\verb|sweep!| is called from \verb|simulate!|, the main function in the code.
+\verb|simulate!| contains the main loop and also necessary setup and data treatment, such as calculating initial energy, allocating memory used inside the loop, and summing up the energy changes in each sweep after the simulation.
+
 
 There are a number of tricks one might use to improve performance.
 Some of these come from insigth to the problem itself and some are of more programatic nature.
@@ -138,7 +154,7 @@ Here, the solution is again the index vectors, because the index vector right at
 This simply lead to a constant addition in the energy, which we of course are allowed to do.
 
 
-Measurements are not always trivial for Monte Carlo simulations.
+Measurements are not trivial for Monte Carlo simulations.
 There are mainly two aspects of interest, the equilibration time and correlation time.
 When startig the simulatoin, it must be run for some period of time before the system has reached equilibrium.
 Before this point, it makes no sense to take samples for calculating expectation value.
@@ -153,20 +169,7 @@ It is possible that one could get better results if one had put more work into t
 
 For obtaining error estimates, I used the Bootstrap methdo, described in \cite{niels}.
 It is not perfect, for example it is heavily dependent on the number of resaples, I do 700, but it does at the very least give an indication of relative uncertainty between simulations.
-The method is quite computational demanding, for low values of the lattice size $N$ the Bootstrapping take more time than the simulation.
-
-
-- Bootstrap and measurements
-
-Interesting solutions:
-- Indexes for neighbor points
-- Very modul based code.
-  |-> Was very easy to implement new types of index vectors
-- Does not really need energy, only the energy difference, which can be calulated explicitly every sweep
-- Exponent lookup
-- delta_H_sweep allocated outside loop
-- Solution to ++ +- boundaries
-
+The method is quite computational demanding, for low values of the lattice size $N$ the Bootstrapping take more time than the simulation!
 
 \section{Results}
 Figure \ref{fig:tau_T} shows $\tau$ as a function of $T$ for some values of $N$, calculated with both the original and extended Mon-Jasnow algorithm, here refered to as the pp and torus systems respectively.
@@ -217,15 +220,19 @@ Also note that for larger N, the torus system is much more stable than the pp sy
     \label{fig:tau_N}}
 \end{figure}
 
-As for estimating $\tau_0$ see figure \ref{fig:tau_TN}.
-
+$\tau/t$ is plotted for both $Nt$ and $1/Nt$ in figure \ref{fig:tau_TN}.
+$\tau_0$ is found using linear regression to be 3.06.
+An improved estimate could probably have been found by simulating for more values.
+Notice in \ref{fig:tau_TN:2} that the simulated points flatten out before the fitted curve, especially the $t=0.1$ (arrow down) points.
+This indicates that one possibly could get a better estimate if one instead of doing linear regression had done it on this curve.
+The figure suggests that the true value of $\tau_0$ is higher than the one I found here, which is correct as the exam text states that $\tau_0\approx 3.99$.
 
 \begin{figure}[H]
   \centering
   \subcaptionbox{$\tau/t$ of $1/Nt$}{
     \includegraphics[width=.47\textwidth]{media/tau_TN}
   }
-  \subcaptionbox{$\tau/t$ of $Nt$}{
+  \subcaptionbox{$\tau/t$ of $Nt$\label{fig:tau_TN:2}}{
     \includegraphics[width=.47\textwidth]{media/tau_TN_alt}
   }
   \caption{$\tau/t$ for various $Nt$ used to estimate $\tau_0$, found with linear regression.
@@ -254,31 +261,30 @@ In the old version of the neighbor interaction calculation I had the following s
 Here, \verb|H| is the spin array and \verb|ir, il, iu, id| are the index vectors.
 I changed this snippet to
 \begin{lstlisting}
-  return (y, ir[x])+  # Right
-         (y, il[x])+  # Left
-         (iu[y], x)+  # Up
-         (id[y], x)   # Down
+  return H(y, ir[x])+  # Right
+         H(y, il[x])+  # Left
+         H(iu[y], x)+  # Up
+         H(id[y], x)   # Down
 \end{lstlisting}
-The difference between the two techniques is that the former makes a new a list, to which is applied the built in sum function while in the latter the sum is carried out directly, not having to allocate a list.
-Also, the former is created with a loop.
-However, even a list written out, not created using a list comprehension, is slower than the direct sum, with a factor of about 2.
-This is in fact one of the points mentioned in Julia's page on performance tips, direct sum instead of summing over a list.
+The difference between the two techniques is that the former makes a new a list, to which is applied the built in sum function(at another place in the code) while in the latter the sum is carried out directly, not having to allocate a list.
 The change in performance was huge -- going from 34 seconds to 3.5 seconds in a benchmark with $N=30$ and hundred thousand sweeps.
 That corresponds to cutting the computaton time from one hour to six minutes!
+It is worth mentioning that the former solution is not only unnecessarily creating a list, the list is created through a loop!
+However, even a list written out, not created using a list comprehension, is slower than the direct sum, with a factor of about 2.
 
 At one point, I changed the type of the index vectors from Int64 to UInt8, under the assumption that one would not simulate systems of $N=255$.
 This would obviously save memory, but strangely it had a negative inpact on speed, with a factor of about 3.
 I did not persue this in depth, so I do not now the reason for this.
-My theory is that either there is something inherent with Julia or the computer that makes 64 bits faster, or that the compiler performs some hidden conversion of the UInt8.
+My theory is that either there is something inherent with Julia or the computer that makes 64 bits faster, or that the compiler performs some hidden conversion from UInt8 to Int64 somewhere in the loop.
 The latter possibility could have been found by writing the code more strict in type, but I did not prioritize this.
 
 
 One last point on performance is parallelization.
 The simulation is very CPU-demanding, but not very memory expensive, and should be fit for running on multiple threads.
 One simulation can not be multithreaded, as it has to be sequential, but running multiple simulations at once would be very benifical in leveraging the full potential of the CPU.
-I did run my simulations in parallell without any issue.
+I did run my simulations in parallell without any issue, with as many as four simulations at a time!
 The only critical point then is to make sure that no part of the execution, for example the bootstrapping, requires too much memory and that the threads do not overwrite each others results in file.
-
+In fact, my first implementation of bootstrap was vectorized, using alot of memory for long simulations, and I had to rewrite it into using less memory in order to do this.
 
 
 As a final note on parallelization, I will mention that I did very briefly attempt further optimization of the neighbor interaction calculation.
@@ -287,18 +293,11 @@ As mentioned, speeding up this operation is very impactful.
 Utilizing the SIMD instructions for multiplying these four values would probably give a considerable speedup.
 I did try this, but was not successful.
 
-  |-> 30s -> 3.5s ( 1 hour -> 6 minutes of simulation )
-- Only uses one core, and is fairly cheap on memory.
-  Should be possible to run multiple at once.
-  Problem that bootstrap uses much memory -> killed
-  Solution: bootstrap later or non-vectorized
-
-
 \begin{thebibliography}{9}
 \bibitem{niels} M. E. J. Newman and G. T. Barkema, \emph{Monte Carlo Methods in Statistical Physics} chap. 3, Oxford University Press, Oxford, (1999).
 
-\bibitem{onsager}  L. Onsager, \emph{Crystal statistics. I. A two-dimensional model with an order-disorder transition},  Phys. Rev. 65, 117 (1944).
+\bibitem{onsager} L. Onsager, \emph{Crystal statistics. I. A two-dimensional model with an order-disorder transition},  Phys. Rev. 65, 117 (1944).
 
-\bibitem{mon_jasnow} ]  K.K. Mon and D. Jasnow, \emph{Direct calculation of interfacial tension for lattice models by the Monte Carlo method}, Phys. Rev. A 30, 670 (1984). 
+\bibitem{mon_jasnow} K.K. Mon and D. Jasnow, \emph{Direct calculation of interfacial tension for lattice models by the Monte Carlo method}, Phys. Rev. A 30, 670 (1984). 
 \end{thebibliography}
 \end{document}
