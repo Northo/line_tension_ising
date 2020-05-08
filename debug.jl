@@ -4,11 +4,13 @@ include("utils.jl")
 # Setup #
 #########
 N_sweeps = 100000
+N_sweeps_eq = 1000
+N_resamples = 200
 Nx, Ny = 30, 30
 T = 1
 
-#system = :pp
-system = :torus
+system = :pp
+#system = :torus
 
 
 ################
@@ -27,7 +29,7 @@ else
 end
 
 # Initial energies
-@time simulate!(
+@time H, m = simulate!(
     H,
     Nx, Ny,
     T,
@@ -35,3 +37,7 @@ end
     ir, il, iu, id,
     difference_function=difference_function,
 )
+
+N_tau, N_tau_std = bootstrap_tau(m[N_sweeps_eq:end], T, N_resamples)
+
+println(N_tau, " : ", N_tau_std)
