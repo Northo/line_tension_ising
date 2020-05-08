@@ -27,9 +27,9 @@ end
 
 function get_pp_hamiltonian(Nx, Ny; T=:inf)
     if T==:inf
-        H_pp = get_random_hamiltonian(Nx+2, Ny)
+        H_pp = get_random_hamiltonian(Nx+1, Ny)
     elseif T==:zero
-        H_pp = get_zero_T_hamiltonian(Nx+2, Ny)
+        H_pp = get_zero_T_hamiltonian(Nx+1, Ny)
     else
         throw(ArgumentError("T must be :inf or :zero, got $(repr(T))"))
     end
@@ -437,13 +437,11 @@ function get_pp_index_vectors(Nx, Ny)
     size Nx+2 x Ny.
     """
 
-    ir, il, iu, id = get_index_vectors(Nx+2, Ny)
+    ir, il, iu, id = get_index_vectors(Nx+1, Ny)
+    il[Nx+1] = Nx+1
     il[1] = Nx+1     # Positive column
-    il[Nx+1] = Nx+1  # Leftmost column links to itself
-    il[Nx+2] = Nx    # Rightmost column
-    ir[Nx] = Nx+2    # Positive/negative column
-    ir[Nx+2] = Nx+2  # Rightmost column links to itself
-    ir[Nx+1] = 1     # Leftmost column
+    ir[Nx] = Nx+1    # Positive/negative column
+    ir[Nx+1] = Nx+1  # Links to itself
     iu[Ny] = 1
     id[1] = Ny
 
