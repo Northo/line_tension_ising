@@ -438,7 +438,7 @@ function get_pp_index_vectors(Nx, Ny)
     """
 
     ir, il, iu, id = get_index_vectors(Nx+1, Ny)
-    il[Nx+1] = Nx+1
+    il[Nx+1] = Nx
     il[1] = Nx+1     # Positive column
     ir[Nx] = Nx+1    # Positive/negative column
     ir[Nx+1] = Nx+1  # Links to itself
