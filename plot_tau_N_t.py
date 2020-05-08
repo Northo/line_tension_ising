@@ -86,7 +86,6 @@ def plot(df, marker="s", label=""):
     y = df["tau"]/df["t"]
     yerr = df["tau_std"]/df["t"]
     x = 1/(df["N"]*df["t"])
-    print(df["tau"])
     plt.errorbar(x, y, yerr=yerr, label=label, fmt=marker)
 
 # If given ts, group
@@ -96,12 +95,15 @@ if ts:
     ts = ts.split(",")
     ts = [float(t) for t in ts]
     groups = df.groupby(["t"])
+    newDf = pandas.DataFrame()
     for t, group in groups:
         # Hack to avoid round off trouble
         t = float(f"{t:.4f}")
         if t in ts:
+            newDf = newDf.append(group)
             plot(group, marker=markers[i], label=t)
             i+=1
+    df = newDf
 else:
     plot(df)
 
