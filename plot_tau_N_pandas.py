@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import pandas
 import sys
@@ -102,8 +103,12 @@ if title:
 plt.legend()
 plt.xlabel("N")
 plt.ylabel("$\\tau$")
-plt.gca().set_xticks([2, 4, 6, 8, 10, 20, 25])
 
+plt.xticks([2, 4, 6, 8, 10, 15, 20, 25])
+plt.gca().get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+
+plt.yticks([0.1, 0.2, 0.4, 1.0])
+plt.gca().get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
 if save:
     plt.savefig(figname)
 plt.show()
