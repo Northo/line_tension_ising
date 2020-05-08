@@ -5,6 +5,8 @@ import pandas
 import matplotlib.pyplot as plt
 import sys
 import getopt
+from scipy.optimize import curve_fit
+from scipy import stats
 
 newparams = {'axes.labelsize': 15,
              'axes.linewidth': 1,
@@ -84,6 +86,7 @@ def plot(df, marker="s", label=""):
     y = df["tau"]/df["t"]
     yerr = df["tau_std"]/df["t"]
     x = (df["N"]*df["t"])
+    print(df["tau"])
     plt.errorbar(x, y, yerr=yerr, label=label, fmt=marker)
 
 # If given ts, group
@@ -105,7 +108,13 @@ else:
 if title:
     plt.title(title)
 
-#plt.plot([0, 5], [3.99, 25])
+x_data = 1/(df["N"]*df["t"])
+y_data = df["tau"]/df["t"]
+
+slope, intercept, r, p, std_err = stats.linregress(x_data, y_data)
+
+curve_x = np.array([np.min(x_data), np.max(x_data)])
+plt.plot(curve_x, curve_x*slope + intercept, label=f"$\\tau_0 = {intercept:.2f}\\pm{std_err:.2f}$")
 plt.xlabel("$1/Nt$")
 plt.ylabel("$\\frac{\\tau}{t}$")
 plt.axhline(y=0, linestyle="dashed", color="gray", linewidth=0.2)
