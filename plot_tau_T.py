@@ -1,7 +1,6 @@
-"""Plots tau vs. T for various N"""
-
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas
 import sys
 import getopt
 
@@ -23,45 +22,73 @@ plt.rcParams.update(newparams)
 
 Tc = 2.26919  # Onsager's critical temp
 
+
 def onsager(T):
     return 2 - T*Tc*np.log(1/np.tanh(1/(T*Tc)))
 
-options, files = getopt.gnu_getopt(sys.argv[1:], 'N:t:', ["title=", "save="])
+def usage():
+    print("Usage: ")
+    print("--data=<datafile> [--title=<title>] [--save=<figfile>] [[--system=<torus|pp>]]")
+    exit()
 
-print('\n'.join(files))
+options, rest = getopt.gnu_getopt(sys.argv[1:], 't:', [
+    "title=",
+    "save=",
+    "data=",
+    "system=",
+])
 
-Ns = []
+
 title = ""
+ts = ""
 save = False
+N_min = -1
+N_max = -1
+filename = ""
+ylim = ""
+system = ""
 for opt, arg in options:
-    if opt == "-N":
-        Ns = arg
-    elif opt in ("-t", "--title"):
+    if opt == "--title":
         title = arg
     elif opt in ("--save"):
         save = True
         figname = arg
-if not Ns:
-    Ns = input("Comma spearated list of N: ")
+    elif opt == "--system":
+        system = arg
+    elif opt == "--data":
+        filename = arg
 
-Ns = Ns.split(",")
+if not filename:
+    print("Missing filename! ")
+    usage()
 
+df = pandas.read_csv(filename, delimiter="\t")
+# Remove values over critica
+if system:
+    df = df[df["system"] == system]
+
+lattice_numbers = df.groupby(["N"])
+i = 0
 markers = ["D", "s", "^", "v", "o"]
-for i, file in enumerate(files):
-    T, tau, tau_std = np.loadtxt(file)
-    plt.errorbar(T, tau, yerr=tau_std, label=f"N={Ns[i]}", fmt=markers[i])
-
-T = np.linspace(0, 1, 100)
-plt.plot(T, onsager(T), "--", label="Onsager")
+for lattice_number, df_lattice in lattice_numbers:
+    plt.errorbar(
+        df_lattice["T"]/Tc,
+        df_lattice["tau"],
+        df_lattice["tau_std"],
+        fmt=markers[i],
+        label=f"N = {lattice_number}",
+    )
+    i += 1
 
 if title:
     plt.title(title)
+
+T = np.linspace(0, 1, 100)
+plt.plot(T, onsager(T), "--", label="Onsager")
+plt.legend()
 plt.xlabel("$T/T_c$")
 plt.ylabel("$\\tau$")
-plt.axhline(y=0, linestyle="dashed", color="gray", linewidth=0.2)
 
-plt.axvline(x=1, linestyle="dashed", color="gray", linewidth=0.2)
-plt.legend()
 if save:
     plt.savefig(figname)
 plt.show()
